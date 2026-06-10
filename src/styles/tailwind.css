@@ -1,0 +1,106 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: teatro --default;
+  root: ":root";
+  include: ;
+  exclude: ;
+  prefix: ;
+  logs: false;
+}
+
+@plugin "daisyui/theme" {
+  name: "teatro";
+  default: true;
+  prefersdark: true;
+  color-scheme: dark;
+
+  --color-base-100: oklch(15% 0.04 270);
+  --color-base-200: oklch(20% 0.04 270);
+  --color-base-300: oklch(27% 0.04 270);
+  --color-base-content: oklch(96% 0.01 250);
+
+  --color-primary: #4F46E5;
+  --color-primary-content: #FFFFFF;
+  --color-secondary: #8B5CF6;
+  --color-secondary-content: #FFFFFF;
+  --color-accent: #F8C14A;
+  --color-accent-content: #1F1300;
+  --color-neutral: #0F172A;
+  --color-neutral-content: #E2E8F0;
+
+  --color-info: #38BDF8;
+  --color-info-content: #04293A;
+  --color-success: #22C55E;
+  --color-success-content: #052E16;
+  --color-warning: #F59E0B;
+  --color-warning-content: #1F1300;
+  --color-error: #F43F5E;
+  --color-error-content: #1F0008;
+
+  --radius-selector: 0.75rem;
+  --radius-field: 0.625rem;
+  --radius-box: 1.25rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: oklch(96% 0.01 250);
+  background-color: #020617;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(79, 70, 229, 0.25), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 80% 30%, rgba(139, 92, 246, 0.18), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 20% 60%, rgba(56, 189, 248, 0.10), transparent 70%),
+    linear-gradient(180deg, #0b0b1f 0%, #050516 60%, #02030d 100%);
+  background-attachment: fixed;
+}
+
+.glass {
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.glass-strong {
+  background-color: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.ring-soft {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 30px 60px -30px rgba(0, 0, 0, 0.6);
+}
+
+.platea-seat-group {
+  /* No aplicar transform al <g>: ya lleva translate(x,y) por atributo
+     y transform-box: fill-box generaba recálculos de bbox que hacían
+     titilar la butaca. El feedback se hace sobre el <rect>. */
+}
+
+.platea-seat-rect {
+  transition: opacity 160ms ease;
+}
+
+.platea-seat-group:hover .platea-seat-rect,
+.platea-seat-group:focus-visible .platea-seat-rect {
+  opacity: 0.85;
+}
+
+.platea-seat-group:focus-visible .platea-seat-rect {
+  stroke: #F8FAFC;
+  stroke-width: 2.4;
+}
