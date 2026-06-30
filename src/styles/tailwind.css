@@ -104,3 +104,17 @@ body {
   stroke: #F8FAFC;
   stroke-width: 2.4;
 }
+
+.palco-a-seat-rect {
+  transition: opacity 160ms ease;
+}
+
+.palco-a-seat-group:hover .palco-a-seat-rect,
+.palco-a-seat-group:focus-visible .palco-a-seat-rect {
+  opacity: 0.85;
+}
+
+.palco-a-seat-group:focus-visible .palco-a-seat-rect {
+  stroke: #F8FAFC;
+  stroke-width: 2.4;
+}

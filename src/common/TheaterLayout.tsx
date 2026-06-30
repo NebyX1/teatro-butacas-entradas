@@ -57,7 +57,7 @@ export function TheaterLayout() {
                   Teatro Lavalleja
                 </span>
                 <span className="text-[11px] sm:text-xs text-slate-300/80">
-                  Reserva de butacas · Platea
+                  Reserva de butacas
                 </span>
               </div>
             </Link>
