@@ -11,6 +11,9 @@ export const seatMapTheme = {
   },
   plateaSurface: '#0c1230',
   plateaSurfaceEdge: 'rgba(124, 152, 255, 0.18)',
+  authorityFill: '#F0B400',
+  authorityStroke: '#B8860B',
+  authorityText: '#3A1F00',
   stage: {
     from: '#F1F5FF',
     to: '#A6BCFF',

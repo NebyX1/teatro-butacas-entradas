@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+        if (!isLocalhost) return;
+
+        window.showOneChild ??= () => {};
+        window.ActionableCoachmark ??= class ActionableCoachmark {};
+      })();
+    </script>
     <title>Teatro Lavalleja · Reserva de butacas</title>
   </head>
   <body>

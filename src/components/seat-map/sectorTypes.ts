@@ -8,7 +8,7 @@
  * selecciones separadas si hace falta.
  */
 
-export type SectorId = 'platea' | 'palco_a';
+export type SectorId = 'platea' | 'palco_a' | 'palco_b' | 'palco_c';
 
 export interface SectorDescriptor {
   id: SectorId;
@@ -30,9 +30,21 @@ export const SECTORS: Record<SectorId, SectorDescriptor> = {
     shortLabel: 'Palco A',
     totalSeats: 51,
   },
+  palco_b: {
+    id: 'palco_b',
+    label: 'Palco B',
+    shortLabel: 'Palco B',
+    totalSeats: 51,
+  },
+  palco_c: {
+    id: 'palco_c',
+    label: 'Palco C',
+    shortLabel: 'Palco C',
+    totalSeats: 50,
+  },
 };
 
-export const SECTOR_ORDER: SectorId[] = ['platea', 'palco_a'];
+export const SECTOR_ORDER: SectorId[] = ['platea', 'palco_a', 'palco_b', 'palco_c'];
 
 /**
  * Estado de butaca compartido entre sectores.

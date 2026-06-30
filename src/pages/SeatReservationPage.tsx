@@ -1,11 +1,15 @@
 import { useCallback, useState } from 'react';
 import { PlateaSeatMap } from '../components/seat-map/PlateaSeatMap';
 import { PalcoASeatMap } from '../components/seat-map/PalcoASeatMap';
+import { PalcoBSeatMap } from '../components/seat-map/PalcoBSeatMap';
+import { PalcoCSeatMap } from '../components/seat-map/PalcoCSeatMap';
 import { SelectionSummary } from '../components/seat-map/SelectionSummary';
-import { toPlateaSelectedItems, toPalcoASelectedItems } from '../components/seat-map/selectedSeatAdapter';
+import { toPlateaSelectedItems, toPalcoASelectedItems, toPalcoBSelectedItems, toPalcoCSelectedItems } from '../components/seat-map/selectedSeatAdapter';
 import { SECTORS, SECTOR_ORDER, type SectorId } from '../components/seat-map/sectorTypes';
 import type { PlateaSeat } from '../components/seat-map/types';
 import type { PalcoASeat } from '../components/seat-map/palcoASeatGenerator';
+import type { PalcoBSeat } from '../components/seat-map/palcoBSeatGenerator';
+import type { PalcoCSeat } from '../components/seat-map/palcoCSeatGenerator';
 import type { SelectedSeatItem } from '../components/seat-map/selectedSeatAdapter';
 
 function InfoCard() {
@@ -48,17 +52,39 @@ export function SeatReservationPage() {
   // Selecciones separadas por sector
   const [plateaSelection, setPlateaSelection] = useState<PlateaSeat[]>([]);
   const [palcoASelection, setPalcoASelection] = useState<PalcoASeat[]>([]);
+  const [palcoBSelection, setPalcoBSelection] = useState<PalcoBSeat[]>([]);
+  const [palcoCSelection, setPalcoCSelection] = useState<PalcoCSeat[]>([]);
   const [plateaWarning, setPlateaWarning] = useState<string | null>(null);
   const [palcoAWarning, setPalcoAWarning] = useState<string | null>(null);
+  const [palcoBWarning, setPalcoBWarning] = useState<string | null>(null);
+  const [palcoCWarning, setPalcoCWarning] = useState<string | null>(null);
 
-  const currentWarning = sectorId === 'platea' ? plateaWarning : palcoAWarning;
-  const currentSelection = sectorId === 'platea' ? plateaSelection : palcoASelection;
+  const currentWarning =
+    sectorId === 'platea'
+      ? plateaWarning
+      : sectorId === 'palco_a'
+        ? palcoAWarning
+        : sectorId === 'palco_b'
+          ? palcoBWarning
+          : palcoCWarning;
+  const currentSelection =
+    sectorId === 'platea'
+      ? plateaSelection
+      : sectorId === 'palco_a'
+        ? palcoASelection
+        : sectorId === 'palco_b'
+          ? palcoBSelection
+          : palcoCSelection;
 
   // Convertir la selección actual a SelectedSeatItem[] para el panel agnóstico
   const selectedItems: SelectedSeatItem[] =
     sectorId === 'platea'
       ? toPlateaSelectedItems(plateaSelection)
-      : toPalcoASelectedItems(palcoASelection);
+      : sectorId === 'palco_a'
+        ? toPalcoASelectedItems(palcoASelection)
+        : sectorId === 'palco_b'
+          ? toPalcoBSelectedItems(palcoBSelection)
+          : toPalcoCSelectedItems(palcoCSelection);
 
   const handleSectorChange = useCallback((newSector: SectorId) => {
     if (newSector === sectorId) return;
@@ -70,9 +96,15 @@ export function SeatReservationPage() {
     if (sectorId === 'platea') {
       setPlateaSelection([]);
       setPlateaWarning(null);
-    } else {
+    } else if (sectorId === 'palco_a') {
       setPalcoASelection([]);
       setPalcoAWarning(null);
+    } else if (sectorId === 'palco_b') {
+      setPalcoBSelection([]);
+      setPalcoBWarning(null);
+    } else {
+      setPalcoCSelection([]);
+      setPalcoCWarning(null);
     }
     setSectorId(newSector);
   }, [sectorId, currentSelection.length]);
@@ -85,17 +117,27 @@ export function SeatReservationPage() {
     if (sectorId === 'platea') {
       setPlateaSelection([]);
       setPlateaWarning(null);
-    } else {
+    } else if (sectorId === 'palco_a') {
       setPalcoASelection([]);
       setPalcoAWarning(null);
+    } else if (sectorId === 'palco_b') {
+      setPalcoBSelection([]);
+      setPalcoBWarning(null);
+    } else {
+      setPalcoCSelection([]);
+      setPalcoCWarning(null);
     }
   };
 
   const handleRemove = (seatId: string) => {
     if (sectorId === 'platea') {
       setPlateaSelection((prev) => prev.filter((s) => s.id !== seatId));
-    } else {
+    } else if (sectorId === 'palco_a') {
       setPalcoASelection((prev) => prev.filter((s) => s.id !== seatId));
+    } else if (sectorId === 'palco_b') {
+      setPalcoBSelection((prev) => prev.filter((s) => s.id !== seatId));
+    } else {
+      setPalcoCSelection((prev) => prev.filter((s) => s.id !== seatId));
     }
   };
 
@@ -195,11 +237,23 @@ export function SeatReservationPage() {
               onSelectionChange={setPlateaSelection}
               onWarning={setPlateaWarning}
             />
-          ) : (
+          ) : sectorId === 'palco_a' ? (
             <PalcoASeatMap
               maxSelectableSeats={8}
               onSelectionChange={setPalcoASelection}
               onWarning={setPalcoAWarning}
+            />
+          ) : sectorId === 'palco_b' ? (
+            <PalcoBSeatMap
+              maxSelectableSeats={8}
+              onSelectionChange={setPalcoBSelection}
+              onWarning={setPalcoBWarning}
+            />
+          ) : (
+            <PalcoCSeatMap
+              maxSelectableSeats={8}
+              onSelectionChange={setPalcoCSelection}
+              onWarning={setPalcoCWarning}
             />
           )}
           <InfoCard />
@@ -216,7 +270,9 @@ export function SeatReservationPage() {
             warning={currentWarning}
             onDismissWarning={() => {
               if (sectorId === 'platea') setPlateaWarning(null);
-              else setPalcoAWarning(null);
+              else if (sectorId === 'palco_a') setPalcoAWarning(null);
+              else if (sectorId === 'palco_b') setPalcoBWarning(null);
+              else setPalcoCWarning(null);
             }}
           />
         </div>
