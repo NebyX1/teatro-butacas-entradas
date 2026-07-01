@@ -1,19 +1,18 @@
 import { PALCO_A_GEOMETRY } from './palcoASeatGenerator';
 import { seatMapTheme } from './seatMapTheme';
 
-const RIBBON_WIDTH = 76;
+const RIBBON_WIDTH = 80;
 
 const RIBBON_PATHS = [
-  { d: 'M 250 105 L 250 575', label: 'Columna izquierda' },
-  { d: 'M 315 605 L 445 820', label: 'Diagonal izquierda' },
-  { d: 'M 495 865 L 730 865', label: 'Inferior izquierda' },
-  { d: 'M 770 865 L 1005 865', label: 'Inferior derecha' },
-  { d: 'M 1055 820 L 1185 605', label: 'Diagonal derecha' },
-  { d: 'M 1250 575 L 1250 105', label: 'Columna derecha' },
+  { d: 'M 180 90 L 180 550', label: 'Columna izquierda' },
+  { d: 'M 180 540 L 590 780', label: 'Diagonal izquierda' },
+  { d: 'M 570 780 L 1084 780', label: 'Inferior' },
+  { d: 'M 1064 780 L 1520 540', label: 'Diagonal derecha' },
+  { d: 'M 1520 90 L 1520 550', label: 'Columna derecha' },
 ];
 
 const OUTLINE_PATH =
-  'M 250 105 L 250 575 L 315 605 L 445 820 L 495 865 L 730 865 M 770 865 L 1005 865 L 1055 820 L 1185 605 L 1250 575 L 1250 105';
+  'M 180 90 L 180 550 L 590 780 L 1084 780 L 1520 550 L 1520 90';
 
 export function PalcoAStage() {
   const { width, height } = PALCO_A_GEOMETRY.viewBox;
@@ -28,11 +27,11 @@ export function PalcoAStage() {
           <stop offset="100%" stopColor={seatMapTheme.background.to} />
         </linearGradient>
         <radialGradient id="palco-a-bg-spot" cx="50%" cy="50%" r="60%">
-          <stop offset="0%" stopColor="rgba(124, 152, 255, 0.18)" />
+          <stop offset="0%" stopColor="rgba(124, 152, 255, 0.16)" />
           <stop offset="100%" stopColor="transparent" />
         </radialGradient>
-        <radialGradient id="palco-a-center-glow" cx="50%" cy="45%" r="35%">
-          <stop offset="0%" stopColor="rgba(99, 102, 241, 0.08)" />
+        <radialGradient id="palco-a-center-glow" cx="50%" cy="45%" r="32%">
+          <stop offset="0%" stopColor="rgba(99, 102, 241, 0.07)" />
           <stop offset="100%" stopColor="transparent" />
         </radialGradient>
       </defs>
@@ -63,10 +62,10 @@ export function PalcoAStage() {
       />
 
       <path
-        d="M 250 105 L 250 575 L 315 605 L 445 820 L 495 865 L 730 865 M 770 865 L 1005 865 L 1055 820 L 1185 605 L 1250 575 L 1250 105"
+        d={OUTLINE_PATH}
         fill="none"
         stroke="rgba(255,255,255,0.05)"
-        strokeWidth={112}
+        strokeWidth={108}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -79,6 +78,7 @@ export function PalcoAStage() {
           stroke="rgba(79, 70, 229, 0.30)"
           strokeWidth={RIBBON_WIDTH}
           strokeLinecap="round"
+          strokeLinejoin="round"
         />
       ))}
 
@@ -90,6 +90,7 @@ export function PalcoAStage() {
           stroke="rgba(129, 140, 248, 0.45)"
           strokeWidth={2}
           strokeLinecap="round"
+          strokeLinejoin="round"
         />
       ))}
 

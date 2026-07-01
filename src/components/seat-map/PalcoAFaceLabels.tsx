@@ -10,11 +10,11 @@ export function PalcoAFaceLabels() {
         x={labels.upperLeft.x}
         y={labels.upperLeft.y}
         textAnchor="middle"
-        fontSize={11}
+        fontSize={10}
         fontWeight={700}
         letterSpacing={3}
         fill={seatMapTheme.sideLabel}
-        opacity={0.62}
+        opacity={0.55}
         style={{ userSelect: 'none' }}
       >
         SUPERIOR
@@ -27,11 +27,11 @@ export function PalcoAFaceLabels() {
         x={labels.upperRight.x}
         y={labels.upperRight.y}
         textAnchor="middle"
-        fontSize={11}
+        fontSize={10}
         fontWeight={700}
         letterSpacing={3}
         fill={seatMapTheme.sideLabel}
-        opacity={0.62}
+        opacity={0.55}
         style={{ userSelect: 'none' }}
       >
         SUPERIOR
@@ -44,11 +44,11 @@ export function PalcoAFaceLabels() {
         x={labels.lowerLeftDiagonal.x}
         y={labels.lowerLeftDiagonal.y}
         textAnchor="middle"
-        fontSize={10}
+        fontSize={9}
         fontWeight={700}
         letterSpacing={2}
         fill={seatMapTheme.sideLabel}
-        opacity={0.58}
+        opacity={0.5}
         style={{ userSelect: 'none' }}
       >
         DIAGONAL IZQ.
@@ -58,11 +58,11 @@ export function PalcoAFaceLabels() {
         x={labels.lowerRightDiagonal.x}
         y={labels.lowerRightDiagonal.y}
         textAnchor="middle"
-        fontSize={10}
+        fontSize={9}
         fontWeight={700}
         letterSpacing={2}
         fill={seatMapTheme.sideLabel}
-        opacity={0.58}
+        opacity={0.5}
         style={{ userSelect: 'none' }}
       >
         DIAGONAL DER.
@@ -76,7 +76,7 @@ export function PalcoAFaceLabels() {
         fontWeight={700}
         letterSpacing={4}
         fill={seatMapTheme.sideLabel}
-        opacity={0.62}
+        opacity={0.55}
         style={{ userSelect: 'none' }}
       >
         INFERIOR

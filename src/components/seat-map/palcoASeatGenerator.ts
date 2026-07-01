@@ -100,53 +100,59 @@ export interface PalcoASegmentDef {
   rotation: number;
 }
 
+/*
+ * Nuevo concepto geométrico: palco ancho, espacioso y simétrico.
+ * viewBox 1700x900. Columnas verticales altas en los extremos, diagonales
+ * suaves (≈30°) descendentes hacia el centro, y cara inferior horizontal
+ * perfectamente centrada, con un hueco visible entre los grupos izq/der.
+ */
 export const PALCO_A_SEGMENTS: Record<string, PalcoASegmentDef> = {
   upperLeft: {
     face: 'upperLeft',
     faceLabel: 'Superior izquierda',
     numbers: [26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14],
-    start: { x: 250, y: 130 },
-    end: { x: 250, y: 550 },
+    start: { x: 180, y: 100 },
+    end: { x: 180, y: 540 },
     rotation: 0,
   },
   lowerLeftDiagonal: {
     face: 'lowerLeftDiagonal',
     faceLabel: 'Diagonal inferior izquierda',
     numbers: [13, 12, 11, 10, 9, 8, 7],
-    start: { x: 315, y: 620 },
-    end: { x: 445, y: 805 },
-    rotation: 55,
+    start: { x: 180, y: 540 },
+    end: { x: 590, y: 780 },
+    rotation: 30,
   },
   bottomLeftGroup: {
     face: 'bottom',
     faceLabel: 'Inferior',
     numbers: [6, 5, 4, 3, 2, 1],
-    start: { x: 515, y: 865 },
-    end: { x: 710, y: 865 },
+    start: { x: 590, y: 780 },
+    end: { x: 820, y: 780 },
     rotation: 0,
   },
   bottomRightGroup: {
     face: 'bottom',
     faceLabel: 'Inferior',
     numbers: [27, 28, 29, 30, 31],
-    start: { x: 790, y: 865 },
-    end: { x: 985, y: 865 },
+    start: { x: 880, y: 780 },
+    end: { x: 1064, y: 780 },
     rotation: 0,
   },
   lowerRightDiagonal: {
     face: 'lowerRightDiagonal',
     faceLabel: 'Diagonal inferior derecha',
     numbers: [32, 33, 34, 35, 36, 37, 38],
-    start: { x: 1055, y: 805 },
-    end: { x: 1185, y: 620 },
-    rotation: -55,
+    start: { x: 1064, y: 780 },
+    end: { x: 1520, y: 540 },
+    rotation: -30,
   },
   upperRight: {
     face: 'upperRight',
     faceLabel: 'Superior derecha',
     numbers: [39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51],
-    start: { x: 1250, y: 550 },
-    end: { x: 1250, y: 130 },
+    start: { x: 1520, y: 100 },
+    end: { x: 1520, y: 540 },
     rotation: 0,
   },
 };
@@ -170,17 +176,17 @@ export interface PalcoAGeometry {
 }
 
 export const PALCO_A_GEOMETRY: PalcoAGeometry = {
-  viewBox: { width: 1500, height: 1040 },
+  viewBox: { width: 1700, height: 900 },
   labels: {
-    upperLeft: { x: 120, y: 340 },
-    upperRight: { x: 1380, y: 340 },
-    lowerLeftDiagonal: { x: 340, y: 760 },
-    lowerRightDiagonal: { x: 1160, y: 760 },
-    bottom: { x: 750, y: 955 },
+    upperLeft: { x: 90, y: 320 },
+    upperRight: { x: 1610, y: 320 },
+    lowerLeftDiagonal: { x: 330, y: 700 },
+    lowerRightDiagonal: { x: 1370, y: 700 },
+    bottom: { x: 850, y: 830 },
   },
   titles: {
-    title: { x: 750, y: 365 },
-    subtitle: { x: 750, y: 418 },
+    title: { x: 850, y: 350 },
+    subtitle: { x: 850, y: 402 },
   },
   seatWidth: SEAT_WIDTH,
   seatHeight: SEAT_HEIGHT,
@@ -198,7 +204,7 @@ function placeSeatsOnSegment(
   const dy = end.y - start.y;
 
   return numbers.map((seatNumber, index) => {
-    const t = n === 1 ? 0 : index / (n - 1);
+    const t = (index + 0.5) / n;
     const x = start.x + dx * t;
     const y = start.y + dy * t;
 
@@ -312,7 +318,7 @@ export function validatePalcoASeats(seats: PalcoASeat[]): void {
     );
   }
 
-  if (!import.meta.env.PROD) {
+  if (DEBUG_GEOMETRY && !import.meta.env.PROD) {
     const overlaps: string[] = [];
     for (let i = 0; i < seats.length; i++) {
       for (let j = i + 1; j < seats.length; j++) {
@@ -341,11 +347,5 @@ export function validatePalcoASeats(seats: PalcoASeat[]): void {
       console.error(msg);
       throw new Error(msg);
     }
-  } else {
-    console.info(
-      `[PalcoASeatMap] OK · ${seats.length} butacas · ${Object.entries(byFace)
-        .map(([f, n]) => `${f}=${n}`)
-        .join(' · ')}`
-    );
   }
 }

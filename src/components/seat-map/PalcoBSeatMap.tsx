@@ -18,6 +18,7 @@ import { PalcoBSeatNode } from './PalcoBSeat';
 import { PalcoBStage } from './PalcoBStage';
 import { PalcoBFaceLabels } from './PalcoBFaceLabels';
 import { PalcoBLegend } from './PalcoBLegend';
+import { useFitToViewTransform } from './useFitToViewTransform';
 
 export interface PalcoBSeatMapProps {
   seatStatuses?: PalcoBSeatStatusMap;
@@ -69,7 +70,7 @@ interface ZoomControlsProps {
 
 function ZoomControls({ onZoomIn, onZoomOut, onReset, onCenter }: ZoomControlsProps) {
   const baseBtn =
-    'group inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-slate-950/70 text-slate-200 backdrop-blur-md transition hover:bg-slate-900 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400/60 active:scale-[0.97]';
+    'group inline-flex h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 items-center justify-center rounded-xl border border-white/10 bg-slate-950/70 text-slate-200 backdrop-blur-md transition hover:bg-slate-900 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400/60 active:scale-[0.97]';
 
   return (
     <div className="pointer-events-auto flex flex-col gap-2 rounded-2xl border border-white/10 bg-slate-950/70 p-1.5 shadow-2xl backdrop-blur-xl">
@@ -118,6 +119,8 @@ function PalcoBSeatMap({
 }: PalcoBSeatMapProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const fit = useFitToViewTransform(viewportRef, PALCO_B_VIEWBOX, 0.96);
 
   const mergedStatuses: PalcoBSeatStatusMap = useMemo(
     () => ({ ...MOCK_SEAT_STATUSES, ...(seatStatuses ?? {}) }),
@@ -169,16 +172,14 @@ function PalcoBSeatMap({
       <div className="glass-strong rounded-3xl shadow-2xl ring-soft overflow-hidden">
         <div className="p-5 sm:p-7 flex flex-col gap-5">
           <header className="flex flex-col gap-3">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-              <div className="flex flex-col gap-1.5">
-                <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-white">
-                  Elegí tus lugares
-                </h2>
-                <p className="text-sm text-slate-300/80 max-w-prose">
-                  Tocá una butaca disponible del Palco B para seleccionarla.
-                  Acercá el mapa con zoom y movélo con el dedo o el mouse.
-                </p>
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-white">
+                Elegí tus lugares
+              </h2>
+              <p className="text-sm text-slate-300/80 max-w-prose">
+                Tocá una butaca disponible del Palco B para seleccionarla.
+                Acercá el mapa con zoom y movélo con el dedo o el mouse.
+              </p>
             </div>
 
             <PalcoBLegend />
@@ -199,68 +200,76 @@ function PalcoBSeatMap({
             </div>
           </header>
 
-          <div className="relative rounded-2xl border border-white/10 bg-[#050616]/80">
+          <div
+            ref={viewportRef}
+            className="seatmap-viewport relative rounded-2xl border border-white/10 bg-[#050616]/80"
+          >
             <div className="absolute inset-0 pointer-events-none opacity-[0.07] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:18px_18px]" />
 
-            <TransformWrapper
-              ref={transformRef}
-              initialScale={0.6}
-              minScale={0.6}
-              maxScale={3.5}
-              wheel={{ disabled: true }}
-              doubleClick={{ disabled: true }}
-              pinch={{ step: 5 }}
-              centerOnInit
-            >
-              {({ zoomIn, zoomOut, resetTransform, centerView }) => (
-                <>
-                  <div className="absolute right-3 top-3 z-10">
-                    <ZoomControls
-                      onZoomIn={() => zoomIn()}
-                      onZoomOut={() => zoomOut()}
-                      onReset={() => resetTransform()}
-                      onCenter={() => centerView(1)}
-                    />
-                  </div>
+            {fit ? (
+              <TransformWrapper
+                key={fit.key}
+                ref={transformRef}
+                initialScale={fit.scale}
+                initialPositionX={fit.positionX}
+                initialPositionY={fit.positionY}
+                minScale={fit.scale}
+                maxScale={3.5}
+                limitToBounds
+                wheel={{ disabled: true }}
+                doubleClick={{ disabled: true }}
+                pinch={{ step: 5 }}
+              >
+                {({ zoomIn, zoomOut, resetTransform, setTransform }) => (
+                  <>
+                    <div className="absolute right-2 top-2 sm:right-3 sm:top-3 z-10">
+                      <ZoomControls
+                        onZoomIn={() => zoomIn()}
+                        onZoomOut={() => zoomOut()}
+                        onReset={() => resetTransform()}
+                        onCenter={() => setTransform(fit.positionX, fit.positionY, fit.scale)}
+                      />
+                    </div>
 
-                  <TransformComponent
-                    wrapperStyle={{ width: '100%', height: '1040px' }}
-                    contentStyle={{
-                      width: `${PALCO_B_VIEWBOX.width}px`,
-                      height: `${PALCO_B_VIEWBOX.height}px`,
-                    }}
-                  >
-                    <svg
-                      viewBox={`0 0 ${PALCO_B_VIEWBOX.width} ${PALCO_B_VIEWBOX.height}`}
-                      width={PALCO_B_VIEWBOX.width}
-                      height={PALCO_B_VIEWBOX.height}
-                      xmlns="http://www.w3.org/2000/svg"
-                      role="img"
-                      aria-label="Mapa interactivo del Palco B del Teatro Lavalleja"
-                      style={{ display: 'block' }}
+                    <TransformComponent
+                      wrapperStyle={{ width: '100%', height: '100%' }}
+                      contentStyle={{
+                        width: `${PALCO_B_VIEWBOX.width}px`,
+                        height: `${PALCO_B_VIEWBOX.height}px`,
+                      }}
                     >
-                      <PalcoBStage />
-                      <PalcoBFaceLabels />
+                      <svg
+                        viewBox={`0 0 ${PALCO_B_VIEWBOX.width} ${PALCO_B_VIEWBOX.height}`}
+                        width={PALCO_B_VIEWBOX.width}
+                        height={PALCO_B_VIEWBOX.height}
+                        xmlns="http://www.w3.org/2000/svg"
+                        role="img"
+                        aria-label="Mapa interactivo del Palco B del Teatro Lavalleja"
+                        style={{ display: 'block' }}
+                      >
+                        <PalcoBStage />
+                        <PalcoBFaceLabels />
 
-                      {seats.map((seat) => (
-                        <PalcoBSeatNode
-                          key={seat.id}
-                          seat={{
-                            ...seat,
-                            status:
-                              seat.status === 'available' &&
-                              selectedIds.includes(seat.id)
-                                ? 'selected'
-                                : seat.status,
-                          }}
-                          onToggle={handleToggle}
-                        />
-                      ))}
-                    </svg>
-                  </TransformComponent>
-                </>
-              )}
-            </TransformWrapper>
+                        {seats.map((seat) => (
+                          <PalcoBSeatNode
+                            key={seat.id}
+                            seat={{
+                              ...seat,
+                              status:
+                                seat.status === 'available' &&
+                                selectedIds.includes(seat.id)
+                                  ? 'selected'
+                                  : seat.status,
+                            }}
+                            onToggle={handleToggle}
+                          />
+                        ))}
+                      </svg>
+                    </TransformComponent>
+                  </>
+                )}
+              </TransformWrapper>
+            ) : null}
           </div>
 
           <p className="text-[11px] text-slate-400">

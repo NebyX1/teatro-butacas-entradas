@@ -326,7 +326,7 @@ export function validatePalcoCSeats(seats: PalcoCSeat[]): void {
     );
   }
 
-  if (!import.meta.env.PROD) {
+  if (DEBUG_GEOMETRY && !import.meta.env.PROD) {
     const overlaps: string[] = [];
     for (let i = 0; i < seats.length; i++) {
       for (let j = i + 1; j < seats.length; j++) {
@@ -355,11 +355,5 @@ export function validatePalcoCSeats(seats: PalcoCSeat[]): void {
       console.error(msg);
       throw new Error(msg);
     }
-  } else {
-    console.info(
-      `[PalcoCSeatMap] OK · ${seats.length} butacas · ${Object.entries(byFace)
-        .map(([f, n]) => `${f}=${n}`)
-        .join(' · ')}`
-    );
   }
 }

@@ -118,3 +118,31 @@ body {
   stroke: #F8FAFC;
   stroke-width: 2.4;
 }
+
+/*
+ * Viewport responsivo para los mapas de butacas (Platea y Palcos A/B/C).
+ * Mobile-first: arranca compacto y va creciendo en tablet/desktop, en vez
+ * de usar una altura fija de escritorio que se ve gigante en celular.
+ * El fit-to-view (useFitToViewTransform + ResizeObserver) recalcula el
+ * zoom inicial automáticamente cuando este contenedor cambia de tamaño.
+ */
+.seatmap-viewport {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  touch-action: pan-x pan-y pinch-zoom;
+  height: clamp(320px, 52vh, 480px);
+}
+
+@media (min-width: 640px) {
+  .seatmap-viewport {
+    height: clamp(460px, 58vh, 620px);
+  }
+}
+
+@media (min-width: 1024px) {
+  .seatmap-viewport {
+    height: clamp(560px, 65vh, 760px);
+  }
+}
+

@@ -38,14 +38,10 @@ export const PLATEA_VIEWBOX = {
   height: 720,
 };
 
-const SIDE_PREFIX: Record<PlateaSide, 'IZQ' | 'DER'> = {
-  izquierda: 'IZQ',
-  derecha: 'DER',
+const SIDE_WORD: Record<PlateaSide, 'left' | 'right'> = {
+  izquierda: 'left',
+  derecha: 'right',
 };
-
-function pad2(n: number): string {
-  return n.toString().padStart(2, '0');
-}
 
 function buildLabel(side: PlateaSide, row: number, seatNumber: number): string {
   const sideText = side === 'izquierda' ? 'Platea izquierda' : 'Platea derecha';
@@ -53,14 +49,32 @@ function buildLabel(side: PlateaSide, row: number, seatNumber: number): string {
 }
 
 /**
+ * Numeración real de la platea (confirmada contra el mapa oficial):
+ *  - La platea usa UNA sola numeración global continua de 1 a 258.
+ *  - Se cuenta fila por fila, empezando en la fila más cercana al
+ *    escenario (fila 1) y avanzando hacia el fondo (fila 13).
+ *  - Dentro de cada fila se cuenta visualmente de izquierda a derecha:
+ *    primero todas las butacas de Platea Izquierda (de afuera hacia el
+ *    pasillo) y, sin reiniciar el contador, se continúa con Platea
+ *    Derecha (del pasillo hacia afuera).
+ *  - Ejemplo fila 1 (8 butacas por lado): Izquierda 1..8, Derecha 9..16.
+ *    La fila 2 continúa en 17, no reinicia en 1 ni en 12.
+ *  - Platea Derecha NUNCA reinicia en 1 ni arranca fijo en 12: siempre
+ *    continúa la secuencia que dejó Platea Izquierda en esa misma fila.
+ */
+
+/**
  * Genera las 258 butacas de la platea con coordenadas calculadas.
  * El algoritmo:
- *  - Para cada fila (1..13) y cada lado, mira PLATEA_ROW_COUNTS.
- *  - En el lado izquierdo, butaca 1 arranca pegada al pasillo y crece hacia
- *    la izquierda. En el lado derecho, butaca 1 arranca pegada al pasillo y
- *    crece hacia la derecha. Esto es la regla de numeración desde el centro
- *    hacia afuera, centralizada acá para poder cambiarla si la Intendencia
- *    confirma otra numeración oficial.
+ *  - Para cada fila (1..13) mira PLATEA_ROW_COUNTS para saber cuántas
+ *    butacas hay por lado (izquierda y derecha tienen el mismo largo).
+ *  - Mantiene un contador global (`globalCounter`) que arranca en 1 y
+ *    nunca se reinicia: se le asignan primero las butacas de Platea
+ *    Izquierda (de afuera hacia el pasillo) y luego, sin cortar la
+ *    secuencia, las de Platea Derecha (del pasillo hacia afuera).
+ *  - Las coordenadas (x/y) se calculan igual que antes: cada lado arranca
+ *    pegado al pasillo (borde interior) y crece hacia afuera. Solo cambia
+ *    qué número se le asigna a cada posición, no la geometría.
  *  - Cada fila aplica un fanOffset (filas más lejanas se abren levemente)
  *    para que la platea se vea como un abanico y no como un rectángulo.
  *
@@ -74,22 +88,38 @@ export function generatePlateaSeats(
   const seats: PlateaSeat[] = [];
   const g = PLATEA_GEOMETRY;
 
+  let globalCounter = 1;
+
   for (let i = 0; i < PLATEA_ROW_COUNTS.length; i++) {
     const row = i + 1;
     const count = PLATEA_ROW_COUNTS[i];
     const y = g.startY + i * g.rowGap;
     const fanOffset = i * g.fanOffsetPerRow;
 
+    const rowLeftStart = globalCounter;
+    const rowRightStart = rowLeftStart + count;
+
     for (const side of ['izquierda', 'derecha'] as const) {
       for (let s = 0; s < count; s++) {
-        const seatNumber = s + 1;
-        const id = `PLATEA-${SIDE_PREFIX[side]}-F${pad2(row)}-B${pad2(seatNumber)}`;
+        // s = posición dentro de la fila arrancando en 0 desde el pasillo
+        // (borde interior) hacia afuera.
+        // Derecha: el pasillo (s=0) recibe el número más bajo del bloque y
+        // crece hacia afuera (visualmente izquierda a derecha ascendente).
+        // Izquierda: se invierte a propósito. El pasillo (s=0, el extremo
+        // derecho visual del bloque izquierdo) recibe el número más BAJO
+        // del bloque, y la butaca más alejada del pasillo (s=count-1, el
+        // extremo izquierdo visual) recibe el número más ALTO. Así, leído
+        // de izquierda a derecha, Platea Izquierda se ve en orden
+        // descendente (ej. 8,7,6,...,1) y no ascendente.
+        const seatNumber = side === 'izquierda' ? rowLeftStart + s : rowRightStart + s;
+
+        const id = `platea-row-${row}-${SIDE_WORD[side]}-seat-${seatNumber}`;
 
         let x: number;
         if (side === 'izquierda') {
           // Borde interior del pasillo
           const innerEdge = g.centerX - g.centerGap / 2;
-          // Butaca 1 (s=0) pegada al pasillo; butaca N crece hacia la izquierda
+          // s=0 pegado al pasillo; s crece hacia la izquierda
           x = innerEdge - (s + 1) * g.seatWidth - s * g.seatGap - fanOffset;
         } else {
           const innerEdge = g.centerX + g.centerGap / 2;
@@ -113,6 +143,8 @@ export function generatePlateaSeats(
         });
       }
     }
+
+    globalCounter = rowRightStart + count;
   }
 
   return seats;
@@ -187,10 +219,5 @@ export function validatePlateaSeats(seats: PlateaSeat[]): void {
       console.error(msg);
       throw new Error(msg);
     }
-  } else {
-    // Útil como smoke test en dev.
-    console.info(
-      `[PlateaSeatMap] OK · ${seats.length} butacas · ${leftSeats.length} izquierda · ${rightSeats.length} derecha · ${PLATEA_ROWS} filas`
-    );
   }
 }
