@@ -1,16 +1,26 @@
 import { useCallback, useState } from 'react';
 import { PlateaSeatMap } from '../components/seat-map/PlateaSeatMap';
-import { PalcoASeatMap } from '../components/seat-map/PalcoASeatMap';
-import { PalcoBSeatMap } from '../components/seat-map/PalcoBSeatMap';
-import { PalcoCSeatMap } from '../components/seat-map/PalcoCSeatMap';
-import { SelectionSummary } from '../components/seat-map/SelectionSummary';
-import { toPlateaSelectedItems, toPalcoASelectedItems, toPalcoBSelectedItems, toPalcoCSelectedItems } from '../components/seat-map/selectedSeatAdapter';
-import { SECTORS, SECTOR_ORDER, type SectorId } from '../components/seat-map/sectorTypes';
+import { PalcoSeatMapContainer } from '../components/seat-map/PalcoSeatMapContainer';
+import { SelectionSummaryHorizontal } from '../components/seat-map/SelectionSummaryHorizontal';
+import { toPlateaSelectedItems } from '../components/seat-map/selectedSeatAdapter';
+import { SECTORS, type SectorId } from '../components/seat-map/sectorTypes';
 import type { PlateaSeat } from '../components/seat-map/types';
-import type { PalcoASeat } from '../components/seat-map/palcoASeatGenerator';
-import type { PalcoBSeat } from '../components/seat-map/palcoBSeatGenerator';
-import type { PalcoCSeat } from '../components/seat-map/palcoCSeatGenerator';
 import type { SelectedSeatItem } from '../components/seat-map/selectedSeatAdapter';
+
+type SectorGroup = 'platea' | 'palcos';
+
+const SECTOR_GROUPS: { id: SectorGroup; label: string; description: string }[] = [
+  {
+    id: 'platea',
+    label: 'Platea',
+    description: 'Mapa completo de Platea con sus 258 butacas.',
+  },
+  {
+    id: 'palcos',
+    label: 'Palcos',
+    description: 'Elegí entre Palco A, B o C desde el mapa.',
+  },
+];
 
 function InfoCard() {
   return (
@@ -45,99 +55,66 @@ function InfoCard() {
 }
 
 export function SeatReservationPage() {
-  const [sectorId, setSectorId] = useState<SectorId>('platea');
+  const [sectorGroup, setSectorGroup] = useState<SectorGroup>('platea');
   const [confirmedIds, setConfirmedIds] = useState<string[] | null>(null);
   const [sectorClearedMsg, setSectorClearedMsg] = useState<string | null>(null);
 
-  // Selecciones separadas por sector
+  // Platea: selección propia. Los palcos son manejados por el contenedor.
   const [plateaSelection, setPlateaSelection] = useState<PlateaSeat[]>([]);
-  const [palcoASelection, setPalcoASelection] = useState<PalcoASeat[]>([]);
-  const [palcoBSelection, setPalcoBSelection] = useState<PalcoBSeat[]>([]);
-  const [palcoCSelection, setPalcoCSelection] = useState<PalcoCSeat[]>([]);
   const [plateaWarning, setPlateaWarning] = useState<string | null>(null);
-  const [palcoAWarning, setPalcoAWarning] = useState<string | null>(null);
-  const [palcoBWarning, setPalcoBWarning] = useState<string | null>(null);
-  const [palcoCWarning, setPalcoCWarning] = useState<string | null>(null);
 
-  const currentWarning =
-    sectorId === 'platea'
-      ? plateaWarning
-      : sectorId === 'palco_a'
-        ? palcoAWarning
-        : sectorId === 'palco_b'
-          ? palcoBWarning
-          : palcoCWarning;
-  const currentSelection =
-    sectorId === 'platea'
-      ? plateaSelection
-      : sectorId === 'palco_a'
-        ? palcoASelection
-        : sectorId === 'palco_b'
-          ? palcoBSelection
-          : palcoCSelection;
+  // Sub-palco activo y selección de palcos (provista por el contenedor).
+  const [activePalcoId, setActivePalcoId] = useState<SectorId>('palco_a');
+  const [palcoSelection, setPalcoSelection] = useState<SelectedSeatItem[]>([]);
+  const [palcoWarning, setPalcoWarning] = useState<string | null>(null);
 
-  // Convertir la selección actual a SelectedSeatItem[] para el panel agnóstico
-  const selectedItems: SelectedSeatItem[] =
-    sectorId === 'platea'
-      ? toPlateaSelectedItems(plateaSelection)
-      : sectorId === 'palco_a'
-        ? toPalcoASelectedItems(palcoASelection)
-        : sectorId === 'palco_b'
-          ? toPalcoBSelectedItems(palcoBSelection)
-          : toPalcoCSelectedItems(palcoCSelection);
+  const isPlatea = sectorGroup === 'platea';
+  const currentSelection = isPlatea ? plateaSelection : palcoSelection;
+  const currentWarning = isPlatea ? plateaWarning : palcoWarning;
+  // sectorId que ve el summary (los palcos exponen el sub-palco activo).
+  const summarySectorId: SectorId = isPlatea ? 'platea' : activePalcoId;
+  const selectedItems: SelectedSeatItem[] = isPlatea
+    ? toPlateaSelectedItems(plateaSelection)
+    : palcoSelection;
 
-  const handleSectorChange = useCallback((newSector: SectorId) => {
-    if (newSector === sectorId) return;
-    // Si hay selección en el sector actual, mostrar aviso
-    if (currentSelection.length > 0) {
-      setSectorClearedMsg('Cambiamos de sector y limpiamos la selección anterior.');
-    }
-    // Limpiar selección del sector actual al cambiar
-    if (sectorId === 'platea') {
+  const handleSectorChange = useCallback(
+    (next: SectorGroup) => {
+      if (next === sectorGroup) return;
+      if (currentSelection.length > 0) {
+        setSectorClearedMsg('Cambiaste de sector: la selección anterior se descartó.');
+      }
+      // Limpiar siempre que se cambia de sector.
       setPlateaSelection([]);
       setPlateaWarning(null);
-    } else if (sectorId === 'palco_a') {
-      setPalcoASelection([]);
-      setPalcoAWarning(null);
-    } else if (sectorId === 'palco_b') {
-      setPalcoBSelection([]);
-      setPalcoBWarning(null);
-    } else {
-      setPalcoCSelection([]);
-      setPalcoCWarning(null);
-    }
-    setSectorId(newSector);
-  }, [sectorId, currentSelection.length]);
+      setPalcoSelection([]);
+      setPalcoWarning(null);
+      setSectorGroup(next);
+    },
+    [sectorGroup, currentSelection.length]
+  );
 
   const handleContinue = () => {
-    setConfirmedIds(currentSelection.map((s) => s.id));
+    const ids = isPlatea
+      ? plateaSelection.map((s) => s.id)
+      : palcoSelection.map((s) => s.id);
+    setConfirmedIds(ids);
   };
 
   const handleClear = () => {
-    if (sectorId === 'platea') {
+    if (isPlatea) {
       setPlateaSelection([]);
       setPlateaWarning(null);
-    } else if (sectorId === 'palco_a') {
-      setPalcoASelection([]);
-      setPalcoAWarning(null);
-    } else if (sectorId === 'palco_b') {
-      setPalcoBSelection([]);
-      setPalcoBWarning(null);
     } else {
-      setPalcoCSelection([]);
-      setPalcoCWarning(null);
+      setPalcoSelection([]);
+      setPalcoWarning(null);
     }
   };
 
   const handleRemove = (seatId: string) => {
-    if (sectorId === 'platea') {
+    if (isPlatea) {
       setPlateaSelection((prev) => prev.filter((s) => s.id !== seatId));
-    } else if (sectorId === 'palco_a') {
-      setPalcoASelection((prev) => prev.filter((s) => s.id !== seatId));
-    } else if (sectorId === 'palco_b') {
-      setPalcoBSelection((prev) => prev.filter((s) => s.id !== seatId));
     } else {
-      setPalcoCSelection((prev) => prev.filter((s) => s.id !== seatId));
+      setPalcoSelection((prev) => prev.filter((s) => s.id !== seatId));
     }
   };
 
@@ -158,7 +135,7 @@ export function SeatReservationPage() {
         </p>
       </section>
 
-      {/* Selector de sector */}
+      {/* Selector de sector (Platea vs. Palcos) */}
       <div className="glass-strong rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
         <div className="flex flex-col gap-1">
           <label
@@ -173,14 +150,14 @@ export function SeatReservationPage() {
         </div>
         <select
           id="sector-select"
-          value={sectorId}
-          onChange={(e) => handleSectorChange(e.target.value as SectorId)}
+          value={sectorGroup}
+          onChange={(e) => handleSectorChange(e.target.value as SectorGroup)}
           className="select select-bordered w-full max-w-xs bg-slate-900/80 border-white/15 text-white focus:border-indigo-400 focus:outline-none"
           aria-label="Seleccionar sector"
         >
-          {SECTOR_ORDER.map((id) => (
-            <option key={id} value={id}>
-              {SECTORS[id].label} · {SECTORS[id].totalSeats} butacas
+          {SECTOR_GROUPS.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.label}
             </option>
           ))}
         </select>
@@ -198,7 +175,7 @@ export function SeatReservationPage() {
           </span>
           <span className="flex-1">
             Reservaste {confirmedIds.length} butaca
-            {confirmedIds.length === 1 ? '' : 's'} en {SECTORS[sectorId].label}. Esta es una versión de
+            {confirmedIds.length === 1 ? '' : 's'} en {SECTORS[summarySectorId].label}. Esta es una versión de
             demostración: la integración con pagos y backend se conecta más
             adelante.
           </span>
@@ -229,52 +206,42 @@ export function SeatReservationPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-5 sm:gap-6">
+      {/* Layout vertical: barra de selección arriba, mapa full-width debajo */}
+      <div className="flex flex-col gap-5 sm:gap-6">
+        <SelectionSummaryHorizontal
+          sectorId={summarySectorId}
+          selected={selectedItems}
+          maxSelectableSeats={8}
+          onClear={handleClear}
+          onContinue={handleContinue}
+          onRemove={handleRemove}
+          warning={currentWarning}
+          onDismissWarning={() => {
+            if (isPlatea) setPlateaWarning(null);
+            else setPalcoWarning(null);
+          }}
+        />
+
         <div className="flex flex-col gap-5">
-          {sectorId === 'platea' ? (
+          {isPlatea ? (
             <PlateaSeatMap
               maxSelectableSeats={8}
               onSelectionChange={setPlateaSelection}
               onWarning={setPlateaWarning}
             />
-          ) : sectorId === 'palco_a' ? (
-            <PalcoASeatMap
-              maxSelectableSeats={8}
-              onSelectionChange={setPalcoASelection}
-              onWarning={setPalcoAWarning}
-            />
-          ) : sectorId === 'palco_b' ? (
-            <PalcoBSeatMap
-              maxSelectableSeats={8}
-              onSelectionChange={setPalcoBSelection}
-              onWarning={setPalcoBWarning}
-            />
           ) : (
-            <PalcoCSeatMap
+            <PalcoSeatMapContainer
+              initialPalcoId={
+                activePalcoId === 'platea' ? 'palco_a' : activePalcoId
+              }
               maxSelectableSeats={8}
-              onSelectionChange={setPalcoCSelection}
-              onWarning={setPalcoCWarning}
+              onSelectionChange={(id, items) => {
+                setActivePalcoId(id);
+                setPalcoSelection(items);
+              }}
             />
           )}
           <InfoCard />
-        </div>
-
-        <div className="xl:sticky xl:top-20 xl:self-start">
-          <SelectionSummary
-            sectorId={sectorId}
-            selected={selectedItems}
-            maxSelectableSeats={8}
-            onClear={handleClear}
-            onContinue={handleContinue}
-            onRemove={handleRemove}
-            warning={currentWarning}
-            onDismissWarning={() => {
-              if (sectorId === 'platea') setPlateaWarning(null);
-              else if (sectorId === 'palco_a') setPalcoAWarning(null);
-              else if (sectorId === 'palco_b') setPalcoBWarning(null);
-              else setPalcoCWarning(null);
-            }}
-          />
         </div>
       </div>
     </div>

@@ -206,7 +206,7 @@ export function PalcoCSeatMap({
 
             <TransformWrapper
               ref={transformRef}
-              initialScale={1}
+              initialScale={0.55}
               minScale={0.55}
               maxScale={3.5}
               wheel={{ disabled: true }}

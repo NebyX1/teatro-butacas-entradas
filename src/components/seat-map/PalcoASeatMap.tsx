@@ -224,7 +224,7 @@ export function PalcoASeatMap({
 
             <TransformWrapper
               ref={transformRef}
-              initialScale={1}
+              initialScale={0.6}
               minScale={0.6}
               maxScale={3.5}
               wheel={{ disabled: true }}
