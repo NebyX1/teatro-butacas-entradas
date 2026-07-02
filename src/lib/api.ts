@@ -65,6 +65,7 @@ export interface CreateReservationResponse {
   total: number;
   subtotal: number;
   serviceFee: number;
+  selectedSeats: SelectedSeatPayload[];
 }
 
 export interface CheckoutResponse {

@@ -31,7 +31,7 @@ export function BuyerDataPage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await updateReservationCustomer(store.reservationId, {
+      const updated = await updateReservationCustomer(store.reservationId, {
         firstName: store.customerData.firstName,
         lastName: store.customerData.lastName,
         documentType: store.customerData.documentType,
@@ -39,6 +39,7 @@ export function BuyerDataPage() {
         email: store.customerData.email,
         phone: store.customerData.phone,
       });
+      store.setReservationFromBackend(updated);
       store.setCurrentStep('review');
       navigate('/reserva/revision');
     } catch (err) {

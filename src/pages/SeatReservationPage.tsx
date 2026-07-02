@@ -13,7 +13,7 @@ import type { PlateaSeat } from '../components/seat-map/types';
 import type { SelectedSeatItem } from '../components/seat-map/selectedSeatAdapter';
 import type { ReservationSeat } from '../store/useReservationStore';
 import { useReservationStore } from '../store/useReservationStore';
-import { toReservationSeatPlatea } from '../lib/reservationPricing';
+import { toReservationSeatPlatea, DEFAULT_SEAT_PRICES } from '../lib/reservationPricing';
 import { createReservation } from '../lib/api';
 
 function InfoCard() {
@@ -120,7 +120,7 @@ export function SeatReservationPage() {
         sectorLabel: SECTORS[activePalcoId].label,
         number: item.seatNumber,
         status: 'available',
-        price: 0,
+        price: DEFAULT_SEAT_PRICES[activePalcoId],
         displayLabel: `${SECTORS[activePalcoId].label}, ${item.detail}`,
       }));
       hydrateSelection(activePalcoId, reservationSeats);

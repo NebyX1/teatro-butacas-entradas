@@ -37,6 +37,7 @@ export function DemoPaymentPage() {
     setError(null);
     try {
       const result = await approveMockPayment(reservationId);
+      store.setReservationFromBackend(result.reservation);
       store.setTickets(result.tickets ?? []);
       store.setPaymentStatus('approved');
       store.setPaymentStatusFromBackend(result.reservation.status);

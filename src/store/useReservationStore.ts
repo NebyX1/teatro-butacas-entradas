@@ -5,6 +5,7 @@ import type {
   ApiReservationSummary,
   ApiTicket,
   CheckoutResponse,
+  SelectedSeatPayload,
 } from '../lib/api';
 
 export type DocumentType = 'ci' | 'pasaporte' | 'otro';
@@ -108,6 +109,7 @@ export interface ReservationActions {
     total: number;
     subtotal: number;
     serviceFee: number;
+    selectedSeats: SelectedSeatPayload[];
   }) => void;
   setCheckoutUrl: (data: CheckoutResponse) => void;
   setTickets: (tickets: ApiTicket[]) => void;
@@ -175,6 +177,27 @@ function generateReservationCode(): string {
 
 function addMinutes(date: Date, minutes: number): string {
   return new Date(date.getTime() + minutes * 60000).toISOString();
+}
+
+/**
+ * Convierte una butaca tal como la devuelve el backend (fuente autoritativa
+ * de precios) al modelo `ReservationSeat` que consume la UI. Se usa siempre
+ * que el store se hidrata desde una respuesta del backend, para que ningún
+ * componente muestre un precio local/estimado luego de que la reserva ya
+ * existe en el servidor.
+ */
+function toReservationSeatFromApi(seat: SelectedSeatPayload): ReservationSeat {
+  return {
+    id: seat.id,
+    sector: seat.sector as SectorId,
+    sectorLabel: seat.sectorLabel ?? seat.sector,
+    row: seat.row,
+    side: seat.side as 'izquierda' | 'derecha' | undefined,
+    number: seat.number ?? 0,
+    status: 'reserved',
+    price: seat.price ?? 0,
+    displayLabel: seat.displayLabel,
+  };
 }
 
 export const useReservationStore = create<ReservationState & ReservationActions>()(
@@ -306,7 +329,8 @@ export const useReservationStore = create<ReservationState & ReservationActions>
       // --- Implementación de acciones de integración con el backend ---
 
       setReservationFromBackend: (data) => {
-        set({
+        const backendSeats = (data.selectedSeats ?? []).map(toReservationSeatFromApi);
+        set((state) => ({
           reservationId: data.reservationId,
           temporaryReservationCode: data.reservationCode,
           backendStatus: data.status,
@@ -316,6 +340,15 @@ export const useReservationStore = create<ReservationState & ReservationActions>
           expiresAt: data.expiresAt ?? null,
           checkoutUrl: data.checkoutUrl ?? null,
           paymentProvider: data.paymentProvider ?? null,
+          // El backend es la fuente autoritativa: si vienen butacas, se
+          // reemplaza por completo la selección local (con precio real).
+          selectedSeats: backendSeats.length > 0 ? backendSeats : state.selectedSeats,
+          pricing: {
+            ...state.pricing,
+            subtotal: data.subtotal,
+            serviceFee: data.serviceFee,
+            total: data.total,
+          },
           tickets: (data.tickets ?? []).map((t) => ({
             id: t.id,
             reservationId: t.reservationId,
@@ -323,11 +356,12 @@ export const useReservationStore = create<ReservationState & ReservationActions>
             seat: t.seat as ReservationSeat,
             createdAt: t.createdAt,
           })),
-        });
+        }));
       },
 
       setCreateReservationResponse: (data) => {
-        set({
+        const backendSeats = (data.selectedSeats ?? []).map(toReservationSeatFromApi);
+        set((state) => ({
           reservationId: data.reservationId,
           temporaryReservationCode: data.reservationCode,
           expiresAt: data.expiresAt,
@@ -335,7 +369,16 @@ export const useReservationStore = create<ReservationState & ReservationActions>
           backendTotal: data.total,
           backendSubtotal: data.subtotal,
           backendServiceFee: data.serviceFee,
-        });
+          // El backend normaliza el precio real de cada butaca al crear la
+          // reserva: reemplazamos la selección local por la autoritativa.
+          selectedSeats: backendSeats.length > 0 ? backendSeats : state.selectedSeats,
+          pricing: {
+            ...state.pricing,
+            subtotal: data.subtotal,
+            serviceFee: data.serviceFee,
+            total: data.total,
+          },
+        }));
       },
 
       setCheckoutUrl: (data) => {

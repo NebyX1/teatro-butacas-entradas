@@ -101,6 +101,7 @@ def create_app() -> Flask:
             "total": reservation["total"],
             "subtotal": reservation["subtotal"],
             "serviceFee": reservation["serviceFee"],
+            "selectedSeats": reservation["selectedSeats"],
         }), 201
 
     # ---------- actualizar cliente ----------

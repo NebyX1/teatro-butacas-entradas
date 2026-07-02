@@ -6,9 +6,13 @@ puede emitir tickets directamente.
 """
 from __future__ import annotations
 
+import logging
 import uuid
 
 import db
+from services.reservations import get_ticket_price
+
+logger = logging.getLogger(__name__)
 
 
 def _short_random() -> str:
@@ -43,4 +47,13 @@ def issue_tickets(reservation_id: str) -> list[dict]:
     if tickets:
         db.insert_tickets(tickets)
 
-    return db.list_tickets_by_reservation(reservation_id)
+    issued = db.list_tickets_by_reservation(reservation_id)
+    logger.debug(
+        "Tickets emitidos: reserva=%s tickets=%s",
+        code,
+        [
+            (t["ticketCode"], t["seat"].get("id"), get_ticket_price(reservation, t)["amount"])
+            for t in issued
+        ],
+    )
+    return issued

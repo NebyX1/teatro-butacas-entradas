@@ -6,13 +6,15 @@ llaman a estas funciones en vez de tocar la DB directamente.
 """
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timedelta
-from typing import Any
 
 from config import Config
 import db
 from payments import get_gateway
+
+logger = logging.getLogger(__name__)
 
 
 # ---------- validaciones ----------
@@ -57,23 +59,177 @@ def validate_customer_payload(payload: dict) -> list[str]:
 
 
 # ---------- precios ----------
+#
+# El backend es la única fuente de verdad para los precios. El frontend
+# puede enviar un `price` estimado al crear la reserva, pero se ignora:
+# `get_seat_price` siempre resuelve el precio configurado por sector,
+# salvo butacas de autoridad de Palco B (gratuitas por diseño).
+
+
+def format_currency_uyu(amount: int) -> str:
+    """Formatea un monto en pesos uruguayos: "$ 1.200"."""
+    return f"$ {int(amount):,}".replace(",", ".")
+
+
+def _is_authority_seat(seat: dict) -> bool:
+    """Detecta butacas de autoridad de Palco B (gratuitas) por su etiqueta."""
+    if seat.get("sector") != "palco_b":
+        return False
+    display_label = (seat.get("displayLabel") or "").lower()
+    return "autoridad" in display_label
+
+
+def get_seat_price(seat: dict) -> int:
+    """Precio autoritativo de una butaca, según su sector.
+
+    El backend nunca confía en el `price` que venga del cliente: siempre
+    resuelve el valor configurado en `Config.SEAT_PRICES`. La única
+    excepción son las butacas de autoridad de Palco B, que son gratuitas
+    por diseño y devuelven 0.
+    """
+    if _is_authority_seat(seat):
+        return 0
+    sector = seat.get("sector", "")
+    return int(Config.SEAT_PRICES.get(sector, 0))
+
+
+def normalize_seats_pricing(seats: list[dict]) -> list[dict]:
+    """Devuelve una copia de `seats` con `price` fijado al valor autoritativo.
+
+    Se llama al crear la reserva para que `selectedSeats` quede persistido
+    con el precio real de cada butaca, sin importar qué haya mandado el
+    frontend.
+    """
+    normalized = []
+    for seat in seats:
+        seat_copy = dict(seat)
+        seat_copy["price"] = get_seat_price(seat)
+        normalized.append(seat_copy)
+    return normalized
+
 
 def calculate_totals(seats: list[dict]) -> dict:
     """Calcula subtotal, service fee y total a partir de las butacas.
 
-    El backend es la fuente de verdad: usa Config.SEAT_PRICES por sector
-    salvo que la butaca traiga `price` explícito (y se respeta).
+    Asume que `seats` ya viene normalizado por `normalize_seats_pricing`,
+    pero igualmente resuelve el precio autoritativo por las dudas.
     """
-    subtotal = 0
-    for seat in seats:
-        sector = seat.get("sector", "")
-        price = seat.get("price")
-        if not isinstance(price, (int, float)) or price <= 0:
-            price = Config.SEAT_PRICES.get(sector, 0)
-        subtotal += int(price)
+    subtotal = sum(
+        seat["price"] if isinstance(seat.get("price"), (int, float))
+        else get_seat_price(seat)
+        for seat in seats
+    )
+    subtotal = int(subtotal)
     service_fee = round(subtotal * Config.SERVICE_FEE_RATE)
     total = subtotal + service_fee
     return {"subtotal": subtotal, "serviceFee": service_fee, "total": total}
+
+
+def get_reservation_seat_price(reservation: dict, seat_id: str) -> int:
+    """Precio autoritativo de una butaca dentro de una reserva ya creada.
+
+    Busca la butaca en `reservation.selectedSeats` por id y devuelve su
+    precio persistido (ya normalizado al crear la reserva). Si por algún
+    motivo no está presente, recalcula con `get_seat_price`. Nunca
+    devuelve un fallback ajeno a la reserva.
+    """
+    for seat in reservation.get("selectedSeats", []) or []:
+        if seat.get("id") == seat_id:
+            price = seat.get("price")
+            if isinstance(price, (int, float)) and (price > 0 or _is_authority_seat(seat)):
+                return int(price)
+            return get_seat_price(seat)
+    return 0
+
+
+def get_ticket_price(reservation: dict, ticket: dict) -> dict:
+    """Determina el precio correcto de la butaca de un ticket.
+
+    Prioridad:
+      1. Precio de la butaca correspondiente en `reservation.selectedSeats`
+         (matcheando por id) — la fuente autoritativa persistida.
+      2. `price` dentro de `ticket.seat` (snapshot guardado al emitir el
+         ticket), por si el ticket es más nuevo que la normalización.
+      3. Precio configurado por sector (`get_seat_price`).
+
+    Nunca devuelve un fallback hardcodeado ajeno a la reserva. Solo las
+    butacas de autoridad de Palco B pueden mostrar $0, y se marcan
+    explícitamente como tales.
+    """
+    ticket_seat = ticket.get("seat", {}) or {}
+    seat_id = ticket_seat.get("id")
+
+    amount = get_reservation_seat_price(reservation, seat_id) if seat_id else 0
+    if amount <= 0 and not _is_authority_seat(ticket_seat):
+        amount = get_seat_price(ticket_seat)
+
+    is_authority = _is_authority_seat(ticket_seat)
+    is_free_authority = is_authority and amount <= 0
+
+    return {
+        "amount": int(amount),
+        "isAuthority": is_free_authority,
+        "formatted": (
+            "Butaca de autoridad" if is_free_authority else format_currency_uyu(amount)
+        ),
+    }
+
+
+def get_ticket_final_price(reservation: dict, ticket: dict) -> dict:
+    """Calcula el precio final de un ticket, incluyendo su porción
+    proporcional del cargo por servicio de la reserva.
+
+    Regla:
+      - Si la reserva tiene 1 sola butaca, el ticket debe reflejar el total
+        de la reserva (base + 100% del cargo por servicio).
+      - Si tiene varias butacas, el cargo por servicio se reparte en
+        proporción al precio base de cada butaca respecto del subtotal
+        (no en partes iguales, salvo que todas las butacas valgan igual).
+      - Las butacas de autoridad (gratuitas) nunca llevan cargo por
+        servicio y se marcan explícitamente.
+
+    Devuelve: basePrice, serviceFeeShare, finalPrice, isAuthority,
+    finalLabel (string listo para mostrar en el PDF).
+    """
+    ticket_seat = ticket.get("seat", {}) or {}
+    seat_id = ticket_seat.get("id")
+    is_authority = _is_authority_seat(ticket_seat)
+
+    if is_authority:
+        return {
+            "basePrice": 0,
+            "serviceFeeShare": 0,
+            "finalPrice": 0,
+            "isAuthority": True,
+            "finalLabel": "Butaca de autoridad",
+        }
+
+    base_price = get_reservation_seat_price(reservation, seat_id) if seat_id else 0
+    if base_price <= 0:
+        base_price = get_seat_price(ticket_seat)
+
+    seats = reservation.get("selectedSeats", []) or []
+    subtotal = reservation.get("subtotal")
+    if not isinstance(subtotal, (int, float)) or subtotal <= 0:
+        subtotal = sum(
+            get_reservation_seat_price(reservation, s.get("id")) for s in seats
+        )
+    service_fee = reservation.get("serviceFee", 0) or 0
+
+    if subtotal > 0 and base_price > 0:
+        service_fee_share = round(service_fee * (base_price / subtotal))
+    else:
+        service_fee_share = 0
+
+    final_price = int(base_price) + int(service_fee_share)
+
+    return {
+        "basePrice": int(base_price),
+        "serviceFeeShare": int(service_fee_share),
+        "finalPrice": final_price,
+        "isAuthority": False,
+        "finalLabel": format_currency_uyu(final_price),
+    }
 
 
 # ---------- creación ----------
@@ -88,7 +244,8 @@ def generate_reservation_code() -> str:
 
 def create_reservation(payload: dict) -> dict:
     """Crea una reserva temporal con status 'held'."""
-    seats = payload.get("selectedSeats", [])
+    raw_seats = payload.get("selectedSeats", [])
+    seats = normalize_seats_pricing(raw_seats)
     customer = payload.get("customer", {}) or {}
     totals = calculate_totals(seats)
 
@@ -112,6 +269,16 @@ def create_reservation(payload: dict) -> dict:
         "paidAt": None,
     }
     db.insert_reservation(reservation)
+
+    logger.debug(
+        "Reserva creada: code=%s seats=%s subtotal=%s serviceFee=%s total=%s",
+        reservation["code"],
+        [(s.get("id"), s.get("sector"), s.get("price")) for s in seats],
+        totals["subtotal"],
+        totals["serviceFee"],
+        totals["total"],
+    )
+
     return reservation
 
 
