@@ -69,7 +69,7 @@ export function PaymentErrorPage() {
             onClick={() => {
               store.setPaymentStatus('none');
               store.setCurrentStep('demo-payment');
-              navigate('/reserva/demo-pago');
+              navigate('/reserva/pre-pago');
             }}
           >
             Reintentar pago

@@ -5,6 +5,7 @@ import {
   PALCO_C_SEAT_HEIGHT,
   PALCO_C_SEAT_RADIUS,
 } from './palcoCSeatGenerator';
+import { PALCO_SEAT_FONT_SIZE } from './palcoShared';
 import type { PalcoCSeat } from './palcoCSeatGenerator';
 import type { SeatStatus } from './sectorTypes';
 
@@ -102,7 +103,7 @@ function PalcoCSeatComponent({ seat, onToggle }: PalcoCSeatNodeProps) {
         y={seatBodyY + seatBodyH / 2}
         textAnchor="middle"
         dominantBaseline="central"
-        fontSize={11}
+        fontSize={PALCO_SEAT_FONT_SIZE}
         fontWeight={700}
         fill={textFill}
         pointerEvents="none"

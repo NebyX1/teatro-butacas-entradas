@@ -1,13 +1,22 @@
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ReservationFlowLayout } from '../../components/reservation/ReservationFlowLayout';
 import { PriceBreakdown } from '../../components/reservation/PriceBreakdown';
 import { SelectedSeatsList } from '../../components/reservation/SelectedSeatsList';
 import { ReservationCodeBadge } from '../../components/reservation/ReservationCodeBadge';
 import { useReservationStore } from '../../store/useReservationStore';
+import { approveMockPayment, rejectMockPayment } from '../../lib/api';
 
 export function DemoPaymentPage() {
   const navigate = useNavigate();
   const store = useReservationStore();
+  const [searchParams] = useSearchParams();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // El reservationId puede venir del query string (URL de mock checkout)
+  // o del store si el usuario navegó internamente.
+  const reservationId = searchParams.get('reservationId') ?? store.reservationId;
 
   const summaryState = {
     selectedSector: store.selectedSector,
@@ -17,6 +26,55 @@ export function DemoPaymentPage() {
     deliveryOption: store.deliveryOption,
     temporaryReservationCode: store.temporaryReservationCode,
     expiresAt: store.expiresAt,
+  };
+
+  const handleApprove = async () => {
+    if (!reservationId) {
+      setError('No hay una reserva activa para aprobar.');
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const result = await approveMockPayment(reservationId);
+      store.setTickets(result.tickets ?? []);
+      store.setPaymentStatus('approved');
+      store.setPaymentStatusFromBackend(result.reservation.status);
+      store.setCurrentStep('success');
+      navigate('/reserva/confirmada');
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? `No se pudo aprobar el pago: ${err.message}`
+          : 'No se pudo aprobar el pago. Intentá de nuevo.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!reservationId) {
+      setError('No hay una reserva activa para rechazar.');
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const result = await rejectMockPayment(reservationId);
+      store.setPaymentStatus('rejected');
+      store.setPaymentStatusFromBackend(result.reservation.status);
+      store.setCurrentStep('payment-error');
+      navigate('/reserva/error-pago');
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? `No se pudo registrar el rechazo: ${err.message}`
+          : 'No se pudo registrar el rechazo. Intentá de nuevo.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -52,26 +110,26 @@ export function DemoPaymentPage() {
           <SelectedSeatsList seats={store.selectedSeats} showPrice />
         </div>
 
+        {error && (
+          <div role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2.5 text-sm text-rose-200">
+            {error}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             type="button"
-            className="btn btn-success btn-md shadow-[0_8px_30px_rgba(34,197,94,0.35)]"
-            onClick={() => {
-              store.setPaymentStatus('approved');
-              store.setCurrentStep('success');
-              navigate('/reserva/confirmada');
-            }}
+            className="btn btn-success btn-md shadow-[0_8px_30px_rgba(34,197,94,0.35)] disabled:opacity-60"
+            disabled={submitting}
+            onClick={handleApprove}
           >
-            Simular pago aprobado
+            {submitting ? 'Procesando…' : 'Simular pago aprobado'}
           </button>
           <button
             type="button"
-            className="btn btn-error btn-md shadow-[0_8px_30px_rgba(244,63,94,0.35)]"
-            onClick={() => {
-              store.setPaymentStatus('rejected');
-              store.setCurrentStep('payment-error');
-              navigate('/reserva/error-pago');
-            }}
+            className="btn btn-error btn-md shadow-[0_8px_30px_rgba(244,63,94,0.35)] disabled:opacity-60"
+            disabled={submitting}
+            onClick={handleReject}
           >
             Simular pago rechazado
           </button>

@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { seatMapTheme } from './seatMapTheme';
 import { SEAT_WIDTH, SEAT_HEIGHT, SEAT_RADIUS } from './palcoASeatGenerator';
+import { PALCO_SEAT_FONT_SIZE } from './palcoShared';
 import type { PalcoASeat } from './palcoASeatGenerator';
 import type { SeatStatus } from './sectorTypes';
 
@@ -98,7 +99,7 @@ function PalcoASeatComponent({ seat, onToggle }: PalcoASeatNodeProps) {
         y={seatBodyY + seatBodyH / 2}
         textAnchor="middle"
         dominantBaseline="central"
-        fontSize={11}
+        fontSize={PALCO_SEAT_FONT_SIZE}
         fontWeight={700}
         fill={textFill}
         pointerEvents="none"

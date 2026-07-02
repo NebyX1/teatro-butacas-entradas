@@ -4,11 +4,14 @@ import { ReservationFlowLayout } from '../../components/reservation/ReservationF
 import { BuyerDataForm } from '../../components/reservation/BuyerDataForm';
 import { useReservationStore } from '../../store/useReservationStore';
 import { validateCustomerData } from '../../lib/reservationValidation';
+import { updateReservationCustomer } from '../../lib/api';
 
 export function BuyerDataPage() {
   const navigate = useNavigate();
   const store = useReservationStore();
   const [errors, setErrors] = useState(validateCustomerData(store.customerData));
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const summaryState = {
     selectedSector: store.selectedSector,
@@ -18,6 +21,35 @@ export function BuyerDataPage() {
     deliveryOption: store.deliveryOption,
     temporaryReservationCode: store.temporaryReservationCode,
     expiresAt: store.expiresAt,
+  };
+
+  const handleSubmit = async () => {
+    if (!store.reservationId) {
+      setSubmitError('No hay una reserva activa. Volvé a la selección de butacas.');
+      return;
+    }
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await updateReservationCustomer(store.reservationId, {
+        firstName: store.customerData.firstName,
+        lastName: store.customerData.lastName,
+        documentType: store.customerData.documentType,
+        documentNumber: store.customerData.documentNumber,
+        email: store.customerData.email,
+        phone: store.customerData.phone,
+      });
+      store.setCurrentStep('review');
+      navigate('/reserva/revision');
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error
+          ? `No se pudieron guardar los datos: ${err.message}`
+          : 'No se pudieron guardar los datos. Intentá de nuevo.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -37,13 +69,16 @@ export function BuyerDataPage() {
           <h2 className="text-base font-semibold text-white">Información de contacto</h2>
         </div>
 
+        {submitError && (
+          <div role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2.5 text-sm text-rose-200">
+            {submitError}
+          </div>
+        )}
+
         <BuyerDataForm
           value={store.customerData}
           onChange={store.setCustomerData}
-          onSubmit={() => {
-            store.setCurrentStep('review');
-            navigate('/reserva/revision');
-          }}
+          onSubmit={handleSubmit}
           onBack={() => {
             store.setCurrentStep('selection');
             navigate('/reserva');
@@ -51,6 +86,9 @@ export function BuyerDataPage() {
           errors={errors}
           setErrors={setErrors}
         />
+        {submitting && (
+          <p className="text-xs text-slate-400">Guardando datos en el servidor…</p>
+        )}
       </div>
     </ReservationFlowLayout>
   );

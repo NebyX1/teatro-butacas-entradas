@@ -1,0 +1,2 @@
+# Mantener la carpeta storage/ en el repositorio.
+# La base SQLite (reservations.sqlite3) se crea automáticamente acá.

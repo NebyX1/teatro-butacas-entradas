@@ -1,3 +1,68 @@
+# Teatro Lavalleja · Reservas
+
+Aplicación de reserva de butacas para el Teatro Lavalleja, con frontend en
+React + TypeScript + Vite y backend mínimo en Flask para simular el flujo
+completo de reserva y pago.
+
+## Arranque rápido
+
+### Frontend (http://localhost:5173)
+
+```bash
+npm install
+npm run dev
+```
+
+Creá un `.env` a partir de `.env.example`:
+
+```
+VITE_API_BASE_URL=http://localhost:5000
+```
+
+### Backend (http://localhost:5000)
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+source .venv/bin/activate       # Linux/macOS
+pip install -r requirements.txt
+cp .env.example .env
+python app.py
+```
+
+Ver [`backend/README.md`](backend/README.md) para más detalles del backend.
+
+## Flujo de reserva
+
+1. Selección de butacas (`/reserva`)
+2. Datos del comprador (`/reserva/datos`)
+3. Revisión (`/reserva/revision`)
+4. Pre-pago (`/reserva/pre-pago`)
+5. Pasarela de pago:
+   - Mock: `/reserva/demo-pago` (simula aprobación/rechazo)
+   - Mercado Pago: redirect a Checkout Pro → `/reserva/pago/success|pending|failure`
+6. Confirmación (`/reserva/confirmada`) o error (`/reserva/error-pago`)
+
+## Modos de pago
+
+- **Mock** (default): simulación local, sin credenciales.
+- **Mercado Pago**: sandbox con `MERCADOPAGO_ACCESS_TOKEN`.
+
+## Estructura
+
+```
+teatro/
+  backend/           # Flask + SQLite + pasarelas de pago
+  src/               # Frontend React
+    lib/api.ts        # Cliente HTTP del backend
+    store/            # Zustand (estado de reserva)
+    routes/reservation/  # Páginas del flujo de reserva
+    components/seat-map/ # Mapas de butacas (Platea, Palcos A/B/C)
+```
+
+---
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

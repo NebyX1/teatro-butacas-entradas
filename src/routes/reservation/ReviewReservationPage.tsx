@@ -6,11 +6,14 @@ import { PriceBreakdown } from '../../components/reservation/PriceBreakdown';
 import { ExpirationNotice } from '../../components/reservation/ExpirationNotice';
 import { useReservationStore } from '../../store/useReservationStore';
 import { isCustomerDataValid } from '../../lib/reservationValidation';
+import { createCheckout } from '../../lib/api';
 
 export function ReviewReservationPage() {
   const navigate = useNavigate();
   const store = useReservationStore();
   const [localTerms, setLocalTerms] = useState(store.termsAccepted);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const summaryState = {
     selectedSector: store.selectedSector,
@@ -103,6 +106,12 @@ export function ReviewReservationPage() {
 
         <ExpirationNotice expiresAt={store.expiresAt} />
 
+        {submitError && (
+          <div role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2.5 text-sm text-rose-200">
+            {submitError}
+          </div>
+        )}
+
         <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 cursor-pointer">
           <input
             type="checkbox"
@@ -145,14 +154,31 @@ export function ReviewReservationPage() {
           <button
             type="button"
             className="btn btn-primary btn-md shadow-[0_8px_30px_rgba(79,70,229,0.45)] disabled:shadow-none"
-            disabled={!canConfirm}
-            onClick={() => {
-              store.createTemporaryReservation();
-              store.setCurrentStep('pre-payment');
-              navigate('/reserva/pre-pago');
+            disabled={!canConfirm || submitting}
+            onClick={async () => {
+              if (!store.reservationId) {
+                setSubmitError('No hay una reserva activa. Volvé a la selección de butacas.');
+                return;
+              }
+              setSubmitting(true);
+              setSubmitError(null);
+              try {
+                const checkout = await createCheckout(store.reservationId);
+                store.setCheckoutUrl(checkout);
+                store.setCurrentStep('pre-payment');
+                navigate('/reserva/pre-pago');
+              } catch (err) {
+                setSubmitError(
+                  err instanceof Error
+                    ? `No se pudo iniciar el pago: ${err.message}`
+                    : 'No se pudo iniciar el pago. Intentá de nuevo.'
+                );
+              } finally {
+                setSubmitting(false);
+              }
             }}
           >
-            Confirmar reserva
+            {submitting ? 'Iniciando pago…' : 'Confirmar reserva'}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>

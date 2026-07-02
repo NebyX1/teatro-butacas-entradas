@@ -1,5 +1,4 @@
 import { PALCO_A_GEOMETRY } from './palcoASeatGenerator';
-import { seatMapTheme } from './seatMapTheme';
 
 const RIBBON_WIDTH = 80;
 
@@ -12,55 +11,22 @@ const RIBBON_PATHS = [
 ];
 
 const OUTLINE_PATH =
-  'M 180 90 L 180 550 L 590 780 L 1084 780 L 1520 550 L 1520 90';
+  'M 180 90 L 180 550 L 590 780 L 1084 780 L 1520 540 L 1520 90';
 
+/**
+ * Geometría estructural del Palco A.
+ *
+ * El fondo del canvas y los gradientes los provee el componente
+ * compartido `PalcoCanvas`, que se dibuja una sola vez en el viewBox
+ * compartido y por fuera del grupo trasladado del palco. Acá solo
+ * queda la geometría local del Palco A (halo, cintas, contorno y
+ * títulos) en sus coordenadas originales.
+ */
 export function PalcoAStage() {
-  const { width, height } = PALCO_A_GEOMETRY.viewBox;
   const titles = PALCO_A_GEOMETRY.titles;
 
   return (
     <g aria-label="Estructura del Palco A">
-      <defs>
-        <linearGradient id="palco-a-bg-gradient" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={seatMapTheme.background.from} />
-          <stop offset="50%" stopColor={seatMapTheme.background.via} />
-          <stop offset="100%" stopColor={seatMapTheme.background.to} />
-        </linearGradient>
-        <radialGradient id="palco-a-bg-spot" cx="50%" cy="50%" r="60%">
-          <stop offset="0%" stopColor="rgba(124, 152, 255, 0.16)" />
-          <stop offset="100%" stopColor="transparent" />
-        </radialGradient>
-        <radialGradient id="palco-a-center-glow" cx="50%" cy="45%" r="32%">
-          <stop offset="0%" stopColor="rgba(99, 102, 241, 0.07)" />
-          <stop offset="100%" stopColor="transparent" />
-        </radialGradient>
-      </defs>
-
-      <rect
-        x={0}
-        y={0}
-        width={width}
-        height={height}
-        fill="url(#palco-a-bg-gradient)"
-        rx={24}
-      />
-      <rect
-        x={0}
-        y={0}
-        width={width}
-        height={height}
-        fill="url(#palco-a-bg-spot)"
-        rx={24}
-      />
-      <rect
-        x={0}
-        y={0}
-        width={width}
-        height={height}
-        fill="url(#palco-a-center-glow)"
-        rx={24}
-      />
-
       <path
         d={OUTLINE_PATH}
         fill="none"

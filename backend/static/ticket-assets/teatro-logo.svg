@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Mascaras de teatro estilizadas: cara sonriente (comedia) -->
+  <path d="M14 10 C10 10 8 14 8 20 C8 30 14 38 20 40 C22 41 24 41 26 40 C24 36 22 30 22 24 C22 16 20 10 14 10 Z" fill="#F4B740" opacity="0.9"/>
+  <circle cx="14" cy="22" r="2.5" fill="#070A1F"/>
+  <path d="M12 28 Q16 32 20 28" stroke="#070A1F" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Cara triste (tragedia) -->
+  <path d="M50 10 C54 10 56 14 56 20 C56 30 50 38 44 40 C42 41 40 41 38 40 C40 36 42 30 42 24 C42 16 44 10 50 10 Z" fill="#62E6C5" opacity="0.85"/>
+  <circle cx="50" cy="22" r="2.5" fill="#070A1F"/>
+  <path d="M44 32 Q50 28 56 32" stroke="#070A1F" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+</svg>

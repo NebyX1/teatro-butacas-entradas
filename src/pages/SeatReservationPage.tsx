@@ -11,8 +11,10 @@ import { toPlateaSelectedItems } from '../components/seat-map/selectedSeatAdapte
 import { SECTORS, type SectorId } from '../components/seat-map/sectorTypes';
 import type { PlateaSeat } from '../components/seat-map/types';
 import type { SelectedSeatItem } from '../components/seat-map/selectedSeatAdapter';
+import type { ReservationSeat } from '../store/useReservationStore';
 import { useReservationStore } from '../store/useReservationStore';
 import { toReservationSeatPlatea } from '../lib/reservationPricing';
+import { createReservation } from '../lib/api';
 
 function InfoCard() {
   return (
@@ -57,10 +59,15 @@ export function SeatReservationPage() {
   const clearStoreSelection = useReservationStore((s) => s.clearSelection);
   const hydrateSelection = useReservationStore((s) => s.hydrateFromExistingSelection);
   const setCurrentStep = useReservationStore((s) => s.setCurrentStep);
+  const setCreateReservationResponse = useReservationStore(
+    (s) => s.setCreateReservationResponse
+  );
   const initialSector = useReservationStore((s) => s.selectedSector);
 
   const [activeSectorId, setActiveSectorId] = useState<SectorId>(initialSector);
   const [sectorClearedMsg, setSectorClearedMsg] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Platea: selección propia. Los palcos son manejados por el contenedor.
   const [plateaSelection, setPlateaSelection] = useState<PlateaSeat[]>([]);
@@ -95,31 +102,58 @@ export function SeatReservationPage() {
     [activeSectorId, currentSelection.length, setSelectedSector]
   );
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (currentSelection.length === 0) {
       if (isPlatea) setPlateaWarning('Seleccioná al menos una butaca para continuar.');
       else setPalcoWarning('Seleccioná al menos una butaca para continuar.');
       return;
     }
     // Sincronizar al store SOLO al continuar, no en cada render.
+    let reservationSeats: ReservationSeat[];
     if (isPlatea) {
-      hydrateSelection('platea', plateaSelection.map(toReservationSeatPlatea));
+      reservationSeats = plateaSelection.map(toReservationSeatPlatea);
+      hydrateSelection('platea', reservationSeats);
     } else {
-      hydrateSelection(
-        activePalcoId,
-        palcoSelection.map((item) => ({
-          id: item.id,
-          sector: activePalcoId,
-          sectorLabel: SECTORS[activePalcoId].label,
-          number: item.seatNumber,
-          status: 'available',
-          price: 0,
-          displayLabel: `${SECTORS[activePalcoId].label}, ${item.detail}`,
-        }))
-      );
+      reservationSeats = palcoSelection.map((item) => ({
+        id: item.id,
+        sector: activePalcoId,
+        sectorLabel: SECTORS[activePalcoId].label,
+        number: item.seatNumber,
+        status: 'available',
+        price: 0,
+        displayLabel: `${SECTORS[activePalcoId].label}, ${item.detail}`,
+      }));
+      hydrateSelection(activePalcoId, reservationSeats);
     }
-    setCurrentStep('buyer-data');
-    navigate('/reserva/datos');
+
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await createReservation({
+        selectedSector: activeSectorId,
+        selectedSeats: reservationSeats.map((s) => ({
+          id: s.id,
+          sector: s.sector,
+          sectorLabel: s.sectorLabel,
+          number: s.number,
+          displayLabel: s.displayLabel,
+          price: s.price,
+          row: s.row,
+          side: s.side,
+        })),
+      });
+      setCreateReservationResponse(res);
+      setCurrentStep('buyer-data');
+      navigate('/reserva/datos');
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error
+          ? `No se pudo crear la reserva: ${err.message}`
+          : 'No se pudo crear la reserva. Intentá de nuevo.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleClear = () => {
@@ -202,6 +236,27 @@ export function SeatReservationPage() {
           2) Selector segmentado de sector, visualmente pegado a la tarjeta del mapa
           3) Tarjeta "Elegí tus lugares" + InfoCard */}
       <div className="flex flex-col gap-5 sm:gap-6">
+        {submitError && (
+          <div
+            role="alert"
+            className="glass rounded-2xl px-4 py-3 text-sm text-rose-200 flex items-center gap-3"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-rose-300/30 bg-rose-300/10">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <span className="flex-1">{submitError}</span>
+          </div>
+        )}
+        {submitting && (
+          <div className="glass rounded-2xl px-4 py-2.5 text-sm text-slate-300 flex items-center gap-2">
+            <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 2a10 10 0 100 20 10 10 0 000-20z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="40 60" />
+            </svg>
+            Creando reserva…
+          </div>
+        )}
         <SelectionSummaryHorizontal
           sectorId={summarySectorId}
           selected={selectedItems}

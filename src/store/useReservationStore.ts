@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { SectorId } from '../components/seat-map/sectorTypes';
+import type {
+  ApiReservationSummary,
+  ApiTicket,
+  CheckoutResponse,
+} from '../lib/api';
 
 export type DocumentType = 'ci' | 'pasaporte' | 'otro';
 
@@ -43,6 +48,14 @@ export type CheckoutStep =
   | 'success'
   | 'payment-error';
 
+export interface BackendTicket {
+  id: string;
+  reservationId: string;
+  ticketCode: string;
+  seat: ReservationSeat;
+  createdAt: string;
+}
+
 export interface ReservationState {
   selectedSector: SectorId;
   selectedSeats: ReservationSeat[];
@@ -58,6 +71,14 @@ export interface ReservationState {
   termsAccepted: boolean;
   currentStep: CheckoutStep;
   paymentStatus: 'none' | 'approved' | 'rejected';
+  // --- Campos de integración con el backend ---
+  backendStatus: string | null;
+  backendTotal: number | null;
+  backendSubtotal: number | null;
+  backendServiceFee: number | null;
+  checkoutUrl: string | null;
+  paymentProvider: string | null;
+  tickets: BackendTicket[];
 }
 
 export interface ReservationActions {
@@ -78,6 +99,20 @@ export interface ReservationActions {
     sector: SectorId,
     seats: ReservationSeat[]
   ) => void;
+  // --- Acciones de integración con el backend ---
+  setReservationFromBackend: (data: ApiReservationSummary) => void;
+  setCreateReservationResponse: (data: {
+    reservationId: string;
+    reservationCode: string;
+    expiresAt: string;
+    total: number;
+    subtotal: number;
+    serviceFee: number;
+  }) => void;
+  setCheckoutUrl: (data: CheckoutResponse) => void;
+  setTickets: (tickets: ApiTicket[]) => void;
+  setPaymentStatusFromBackend: (status: string) => void;
+  resetReservationFlow: () => void;
 }
 
 const DEFAULT_PRICES: Record<SectorId, number> = {
@@ -120,6 +155,13 @@ const initialState: ReservationState = {
   termsAccepted: false,
   currentStep: 'selection',
   paymentStatus: 'none',
+  backendStatus: null,
+  backendTotal: null,
+  backendSubtotal: null,
+  backendServiceFee: null,
+  checkoutUrl: null,
+  paymentProvider: null,
+  tickets: [],
 };
 
 function generateReservationCode(): string {
@@ -260,6 +302,72 @@ export const useReservationStore = create<ReservationState & ReservationActions>
         });
         get().calculateTotals();
       },
+
+      // --- Implementación de acciones de integración con el backend ---
+
+      setReservationFromBackend: (data) => {
+        set({
+          reservationId: data.reservationId,
+          temporaryReservationCode: data.reservationCode,
+          backendStatus: data.status,
+          backendTotal: data.total,
+          backendSubtotal: data.subtotal,
+          backendServiceFee: data.serviceFee,
+          expiresAt: data.expiresAt ?? null,
+          checkoutUrl: data.checkoutUrl ?? null,
+          paymentProvider: data.paymentProvider ?? null,
+          tickets: (data.tickets ?? []).map((t) => ({
+            id: t.id,
+            reservationId: t.reservationId,
+            ticketCode: t.ticketCode,
+            seat: t.seat as ReservationSeat,
+            createdAt: t.createdAt,
+          })),
+        });
+      },
+
+      setCreateReservationResponse: (data) => {
+        set({
+          reservationId: data.reservationId,
+          temporaryReservationCode: data.reservationCode,
+          expiresAt: data.expiresAt,
+          backendStatus: 'held',
+          backendTotal: data.total,
+          backendSubtotal: data.subtotal,
+          backendServiceFee: data.serviceFee,
+        });
+      },
+
+      setCheckoutUrl: (data) => {
+        set({
+          checkoutUrl: data.checkoutUrl,
+          paymentProvider: data.provider,
+          backendStatus: 'payment_pending',
+        });
+      },
+
+      setTickets: (tickets) => {
+        set({
+          tickets: tickets.map((t) => ({
+            id: t.id,
+            reservationId: t.reservationId,
+            ticketCode: t.ticketCode,
+            seat: t.seat as ReservationSeat,
+            createdAt: t.createdAt,
+          })),
+        });
+      },
+
+      setPaymentStatusFromBackend: (status) => {
+        set({ backendStatus: status });
+      },
+
+      resetReservationFlow: () => {
+        set({
+          ...initialState,
+          pricing: { ...initialPricing },
+        });
+      },
     }),
     {
       name: 'teatro-reservation-draft',
@@ -276,6 +384,13 @@ export const useReservationStore = create<ReservationState & ReservationActions>
         pricing: state.pricing,
         deliveryOption: state.deliveryOption,
         termsAccepted: state.termsAccepted,
+        backendStatus: state.backendStatus,
+        backendTotal: state.backendTotal,
+        backendSubtotal: state.backendSubtotal,
+        backendServiceFee: state.backendServiceFee,
+        checkoutUrl: state.checkoutUrl,
+        paymentProvider: state.paymentProvider,
+        tickets: state.tickets,
       }),
     }
   )

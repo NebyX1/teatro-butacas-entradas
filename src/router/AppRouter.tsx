@@ -8,6 +8,9 @@ import { PrePaymentPage } from '../routes/reservation/PrePaymentPage';
 import { DemoPaymentPage } from '../routes/reservation/DemoPaymentPage';
 import { ReservationSuccessPage } from '../routes/reservation/ReservationSuccessPage';
 import { PaymentErrorPage } from '../routes/reservation/PaymentErrorPage';
+import { PaymentSuccessPage } from '../routes/reservation/PaymentSuccessPage';
+import { PaymentPendingPage } from '../routes/reservation/PaymentPendingPage';
+import { PaymentFailurePage } from '../routes/reservation/PaymentFailurePage';
 import { ReservationGuard } from '../routes/reservation/ReservationGuard';
 
 export function AppRouter() {
@@ -64,6 +67,30 @@ export function AppRouter() {
             element={
               <ReservationGuard requiredStep="demo-payment">
                 <PaymentErrorPage />
+              </ReservationGuard>
+            }
+          />
+          <Route
+            path="reserva/pago/success"
+            element={
+              <ReservationGuard requiredStep="pre-payment">
+                <PaymentSuccessPage />
+              </ReservationGuard>
+            }
+          />
+          <Route
+            path="reserva/pago/pending"
+            element={
+              <ReservationGuard requiredStep="pre-payment">
+                <PaymentPendingPage />
+              </ReservationGuard>
+            }
+          />
+          <Route
+            path="reserva/pago/failure"
+            element={
+              <ReservationGuard requiredStep="pre-payment">
+                <PaymentFailurePage />
               </ReservationGuard>
             }
           />

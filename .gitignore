@@ -48,6 +48,10 @@ backend/venv/
 .venv/
 __pycache__/
 *.pyc
+
+# Backend SQLite local DB
+backend/storage/*.sqlite3
+backend/storage/*.db
 *.pyo
 *.pyd
 migrations/

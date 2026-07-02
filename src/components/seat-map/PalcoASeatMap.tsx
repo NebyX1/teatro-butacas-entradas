@@ -19,6 +19,8 @@ import { PalcoAStage } from './PalcoAStage';
 import { PalcoAFaceLabels } from './PalcoAFaceLabels';
 import { PalcoALegend } from './PalcoALegend';
 import { useFitToViewTransform } from './useFitToViewTransform';
+import { PALCO_VIEWBOX, palcoCenterOffset } from './palcoShared';
+import { PalcoCanvas } from './PalcoCanvas';
 
 export interface PalcoASeatMapProps {
   seatStatuses?: PalcoASeatStatusMap;
@@ -128,7 +130,16 @@ export function PalcoASeatMap({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const fit = useFitToViewTransform(viewportRef, PALCO_A_VIEWBOX, 0.96);
+  // Usamos el viewBox compartido para que el minZoom / fitScale sea idéntico
+  // en los tres palcos. Sin esto, cada sector se ajustaba de forma
+  // independiente y la butaca terminaba con un tamaño visual distinto.
+  const fit = useFitToViewTransform(viewportRef, PALCO_VIEWBOX, 0.96);
+  // Traslación que centra el contenido local del Palco A dentro del viewBox
+  // compartido, sin alterar la geometría del palco.
+  const { tx: palcoATx, ty: palcoATy } = useMemo(
+    () => palcoCenterOffset(PALCO_A_VIEWBOX),
+    []
+  );
 
   const mergedStatuses: PalcoASeatStatusMap = useMemo(
     () => ({ ...MOCK_SEAT_STATUSES, ...(seatStatuses ?? {}) }),
@@ -254,36 +265,45 @@ export function PalcoASeatMap({
                     <TransformComponent
                       wrapperStyle={{ width: '100%', height: '100%' }}
                       contentStyle={{
-                        width: `${PALCO_A_VIEWBOX.width}px`,
-                        height: `${PALCO_A_VIEWBOX.height}px`,
+                        width: `${PALCO_VIEWBOX.width}px`,
+                        height: `${PALCO_VIEWBOX.height}px`,
                       }}
                     >
                       <svg
-                        viewBox={`0 0 ${PALCO_A_VIEWBOX.width} ${PALCO_A_VIEWBOX.height}`}
-                        width={PALCO_A_VIEWBOX.width}
-                        height={PALCO_A_VIEWBOX.height}
+                        viewBox={`0 0 ${PALCO_VIEWBOX.width} ${PALCO_VIEWBOX.height}`}
+                        width={PALCO_VIEWBOX.width}
+                        height={PALCO_VIEWBOX.height}
                         xmlns="http://www.w3.org/2000/svg"
                         role="img"
                         aria-label="Mapa interactivo del Palco A del Teatro Lavalleja"
                         style={{ display: 'block' }}
                       >
-                        <PalcoAStage />
-                        <PalcoAFaceLabels />
+                        {/* Canvas/artboard compartido: garantiza que el
+                            "panel oscuro" interior tenga exactamente el
+                            mismo tamaño en los tres palcos. */}
+                        <PalcoCanvas />
+                        {/* Centramos el contenido local del Palco A dentro del
+                            viewBox compartido. La geometría interna no cambia,
+                            solo su ubicación. */}
+                        <g transform={`translate(${palcoATx}, ${palcoATy})`}>
+                          <PalcoAStage />
+                          <PalcoAFaceLabels />
 
-                        {seats.map((seat) => (
-                          <PalcoASeatNode
-                            key={seat.id}
-                            seat={{
-                              ...seat,
-                              status:
-                                seat.status === 'available' &&
-                                selectedIds.includes(seat.id)
-                                  ? 'selected'
-                                  : seat.status,
-                            }}
-                            onToggle={handleToggle}
-                          />
-                        ))}
+                          {seats.map((seat) => (
+                            <PalcoASeatNode
+                              key={seat.id}
+                              seat={{
+                                ...seat,
+                                status:
+                                  seat.status === 'available' &&
+                                  selectedIds.includes(seat.id)
+                                    ? 'selected'
+                                    : seat.status,
+                              }}
+                              onToggle={handleToggle}
+                            />
+                          ))}
+                        </g>
                       </svg>
                     </TransformComponent>
                   </>

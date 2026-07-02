@@ -1,4 +1,9 @@
 import type { SeatStatus, SeatStatusMap } from './sectorTypes';
+import {
+  PALCO_SEAT_WIDTH,
+  PALCO_SEAT_HEIGHT,
+  PALCO_SEAT_RADIUS,
+} from './palcoShared';
 
 export type PalcoBFaceId =
   | 'upperLeft'
@@ -87,9 +92,11 @@ export interface Point {
 
 const DEBUG_GEOMETRY = false;
 
-export const PALCO_B_SEAT_WIDTH = 38;
-export const PALCO_B_SEAT_HEIGHT = 26;
-export const PALCO_B_SEAT_RADIUS = 8;
+// Re-exports con el nombre histórico para no romper imports antiguos.
+// El valor canónico vive en ./palcoShared y se reutiliza entre los tres palcos.
+export const PALCO_B_SEAT_WIDTH = PALCO_SEAT_WIDTH;
+export const PALCO_B_SEAT_HEIGHT = PALCO_SEAT_HEIGHT;
+export const PALCO_B_SEAT_RADIUS = PALCO_SEAT_RADIUS;
 
 export interface PalcoBSegmentDef {
   face: PalcoBFaceId;

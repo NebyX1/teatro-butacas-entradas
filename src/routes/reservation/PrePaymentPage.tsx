@@ -81,8 +81,21 @@ export function PrePaymentPage() {
             type="button"
             className="btn btn-primary btn-md shadow-[0_8px_30px_rgba(79,70,229,0.45)]"
             onClick={() => {
-              store.setCurrentStep('demo-payment');
-              navigate('/reserva/demo-pago');
+              const url = store.checkoutUrl;
+              if (!url) {
+                store.setCurrentStep('review');
+                navigate('/reserva/revision');
+                return;
+              }
+              // Si la URL es del propio frontend (mock), navegamos internamente.
+              // Si es externa (Mercado Pago), redirigimos el navegador.
+              const isInternal = url.startsWith(window.location.origin) || url.startsWith('/');
+              if (isInternal) {
+                const path = url.replace(window.location.origin, '');
+                navigate(path);
+              } else {
+                window.location.href = url;
+              }
             }}
           >
             Ir a pasarela de pago

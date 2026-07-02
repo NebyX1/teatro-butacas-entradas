@@ -5,6 +5,7 @@ import {
   PALCO_B_SEAT_HEIGHT,
   PALCO_B_SEAT_RADIUS,
 } from './palcoBSeatGenerator';
+import { PALCO_SEAT_FONT_SIZE } from './palcoShared';
 import type { PalcoBSeat } from './palcoBSeatGenerator';
 import type { SeatStatus } from './sectorTypes';
 
@@ -106,7 +107,7 @@ function PalcoBSeatComponent({ seat, onToggle }: PalcoBSeatNodeProps) {
         y={seatBodyY + seatBodyH / 2}
         textAnchor="middle"
         dominantBaseline="central"
-        fontSize={isAuthority ? 12 : 11}
+        fontSize={isAuthority ? 12 : PALCO_SEAT_FONT_SIZE}
         fontWeight={700}
         fill={textFill}
         pointerEvents="none"
