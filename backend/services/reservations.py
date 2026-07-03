@@ -38,6 +38,18 @@ def validate_create_payload(payload: dict) -> list[str]:
             errors.append("Cada butaca debe tener sector.")
         if "number" not in seat and "displayLabel" not in seat:
             errors.append("Cada butaca debe tener number o displayLabel.")
+
+    # Validación opcional de contexto de espectáculo.
+    # Si se envía show/performance, validamos campos mínimos. Si no se
+    # envía, no bloqueamos la reserva (compatibilidad con flujos legacy).
+    show = payload.get("show")
+    if show is not None:
+        if not isinstance(show, dict) or not show.get("id") or not show.get("title"):
+            errors.append("show debe incluir al menos id y title.")
+    performance = payload.get("performance")
+    if performance is not None:
+        if not isinstance(performance, dict) or not performance.get("id"):
+            errors.append("performance debe incluir al menos id.")
     return errors
 
 
@@ -249,6 +261,11 @@ def create_reservation(payload: dict) -> dict:
     customer = payload.get("customer", {}) or {}
     totals = calculate_totals(seats)
 
+    # Snapshot inmutable del espectáculo y la función seleccionada.
+    # Se almacena como JSON para no depender de tablas externas de shows.
+    show = payload.get("show") or {}
+    performance = payload.get("performance") or {}
+
     now = datetime.utcnow()
     expires_at = now + timedelta(minutes=Config.RESERVATION_HOLD_MINUTES)
 
@@ -267,6 +284,8 @@ def create_reservation(payload: dict) -> dict:
         "createdAt": now.isoformat() + "Z",
         "expiresAt": expires_at.isoformat() + "Z",
         "paidAt": None,
+        "show": show,
+        "performance": performance,
     }
     db.insert_reservation(reservation)
 

@@ -17,6 +17,8 @@ interface ReservationFlowLayoutProps {
     | 'deliveryOption'
     | 'temporaryReservationCode'
     | 'expiresAt'
+    | 'selectedShow'
+    | 'selectedPerformance'
   >;
 }
 

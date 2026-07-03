@@ -12,6 +12,8 @@ interface ReservationSummaryCardProps {
     | 'deliveryOption'
     | 'temporaryReservationCode'
     | 'expiresAt'
+    | 'selectedShow'
+    | 'selectedPerformance'
   >;
   variant?: 'compact' | 'full';
 }
@@ -22,6 +24,8 @@ export function ReservationSummaryCard({
 }: ReservationSummaryCardProps) {
   const compact = variant === 'compact';
   const hasCustomer = state.customerData.firstName || state.customerData.lastName;
+  const show = state.selectedShow;
+  const performance = state.selectedPerformance;
 
   return (
     <div className="glass rounded-2xl p-4 sm:p-5 flex flex-col gap-4">
@@ -33,6 +37,34 @@ export function ReservationSummaryCard({
         </span>
         <h3 className="text-sm font-semibold text-white">Resumen de la reserva</h3>
       </div>
+
+      {/* Contexto de espectáculo / función */}
+      {show && performance && (
+        <div
+          className="flex flex-col gap-1.5 rounded-xl border p-3"
+          style={{
+            borderColor: `${show.accentColor}33`,
+            backgroundColor: `${show.accentColor}0a`,
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <span
+              className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+              style={{ backgroundColor: `${show.accentColor}22`, color: show.accentColor }}
+            >
+              Función
+            </span>
+            {performance.isPremiere && (
+              <span className="rounded-full border border-rose-400/30 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-200">
+                Estreno
+              </span>
+            )}
+          </div>
+          <span className="text-sm font-semibold text-white leading-tight">{show.title}</span>
+          <span className="text-xs text-slate-400">{performance.label}</span>
+          <span className="text-xs text-slate-500">{show.venue} · {show.durationMinutes} min</span>
+        </div>
+      )}
 
       {!compact && (
         <div className="flex flex-col gap-1">

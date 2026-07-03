@@ -17,6 +17,8 @@ export function PaymentErrorPage() {
     deliveryOption: store.deliveryOption,
     temporaryReservationCode: store.temporaryReservationCode,
     expiresAt: store.expiresAt,
+    selectedShow: store.selectedShow,
+    selectedPerformance: store.selectedPerformance,
   };
 
   return (

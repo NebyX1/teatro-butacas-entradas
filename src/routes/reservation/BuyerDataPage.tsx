@@ -21,6 +21,8 @@ export function BuyerDataPage() {
     deliveryOption: store.deliveryOption,
     temporaryReservationCode: store.temporaryReservationCode,
     expiresAt: store.expiresAt,
+    selectedShow: store.selectedShow,
+    selectedPerformance: store.selectedPerformance,
   };
 
   const handleSubmit = async () => {
@@ -82,7 +84,8 @@ export function BuyerDataPage() {
           onSubmit={handleSubmit}
           onBack={() => {
             store.setCurrentStep('selection');
-            navigate('/reserva');
+            const perfId = store.currentPerformanceId;
+            navigate(perfId ? `/reserva/${perfId}` : '/espectaculos');
           }}
           errors={errors}
           setErrors={setErrors}

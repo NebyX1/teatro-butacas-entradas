@@ -23,6 +23,8 @@ export function ReviewReservationPage() {
     deliveryOption: store.deliveryOption,
     temporaryReservationCode: store.temporaryReservationCode,
     expiresAt: store.expiresAt,
+    selectedShow: store.selectedShow,
+    selectedPerformance: store.selectedPerformance,
   };
 
   const canConfirm =
@@ -36,6 +38,37 @@ export function ReviewReservationPage() {
       summaryState={summaryState}
     >
       <div className="flex flex-col gap-5">
+        {store.selectedShow && store.selectedPerformance && (
+          <section className="glass rounded-2xl p-4 sm:p-6 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-accent">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 6h16M4 12h16M4 18h7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <h2 className="text-base font-semibold text-white">Espectáculo y función</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                <span className="text-xs text-slate-400 block">Obra</span>
+                <span className="text-slate-100">{store.selectedShow.title}</span>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                <span className="text-xs text-slate-400 block">Función</span>
+                <span className="text-slate-100">{store.selectedPerformance.label}</span>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                <span className="text-xs text-slate-400 block">Sala</span>
+                <span className="text-slate-100">{store.selectedShow.venue}</span>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                <span className="text-xs text-slate-400 block">Duración</span>
+                <span className="text-slate-100">{store.selectedShow.durationMinutes} min</span>
+              </div>
+            </div>
+          </section>
+        )}
+
         <section className="glass rounded-2xl p-4 sm:p-6 flex flex-col gap-4">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-indigo-300">
@@ -135,7 +168,8 @@ export function ReviewReservationPage() {
               className="btn btn-ghost btn-sm text-slate-300 hover:bg-white/10 hover:text-white"
               onClick={() => {
                 store.setCurrentStep('selection');
-                navigate('/reserva');
+                const perfId = store.currentPerformanceId;
+                navigate(perfId ? `/reserva/${perfId}` : '/espectaculos');
               }}
             >
               Editar butacas

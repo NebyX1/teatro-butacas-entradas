@@ -7,6 +7,8 @@ import type {
   CheckoutResponse,
   SelectedSeatPayload,
 } from '../lib/api';
+import type { Show, Performance } from '../data/shows';
+import { getPerformanceById } from '../data/shows';
 
 export type DocumentType = 'ci' | 'pasaporte' | 'otro';
 
@@ -57,6 +59,35 @@ export interface BackendTicket {
   createdAt: string;
 }
 
+/**
+ * Snapshot mínimo del espectáculo y la función seleccionada, persistido
+ * junto con la reserva para que las páginas de checkout y el PDF del
+ * backend tengan contexto teatral sin depender solo del estado efímero.
+ */
+export interface SelectedShowSnapshot {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string;
+  category: string;
+  genre: string;
+  durationMinutes: number;
+  ageRating: string;
+  accentColor: string;
+  venue: string;
+}
+
+export interface SelectedPerformanceSnapshot {
+  id: string;
+  showId: string;
+  date: string;
+  time: string;
+  datetime: string;
+  label: string;
+  priceFrom: number;
+  isPremiere: boolean;
+}
+
 export interface ReservationState {
   selectedSector: SectorId;
   selectedSeats: ReservationSeat[];
@@ -80,6 +111,10 @@ export interface ReservationState {
   checkoutUrl: string | null;
   paymentProvider: string | null;
   tickets: BackendTicket[];
+  // --- Contexto de espectáculo / función seleccionada ---
+  selectedShow: SelectedShowSnapshot | null;
+  selectedPerformance: SelectedPerformanceSnapshot | null;
+  currentPerformanceId: string | null;
 }
 
 export interface ReservationActions {
@@ -115,6 +150,11 @@ export interface ReservationActions {
   setTickets: (tickets: ApiTicket[]) => void;
   setPaymentStatusFromBackend: (status: string) => void;
   resetReservationFlow: () => void;
+  // --- Acciones de espectáculo / función ---
+  setSelectedShow: (show: Show) => void;
+  setSelectedPerformance: (performance: Performance) => void;
+  clearSelectedPerformance: () => void;
+  hydrateSelectedPerformanceFromRoute: (performanceId: string) => boolean;
 }
 
 const DEFAULT_PRICES: Record<SectorId, number> = {
@@ -164,6 +204,9 @@ const initialState: ReservationState = {
   checkoutUrl: null,
   paymentProvider: null,
   tickets: [],
+  selectedShow: null,
+  selectedPerformance: null,
+  currentPerformanceId: null,
 };
 
 function generateReservationCode(): string {
@@ -330,6 +373,10 @@ export const useReservationStore = create<ReservationState & ReservationActions>
 
       setReservationFromBackend: (data) => {
         const backendSeats = (data.selectedSeats ?? []).map(toReservationSeatFromApi);
+        // Hidratar contexto de espectáculo desde el snapshot del backend
+        // (fuente autoritativa después de crear la reserva).
+        const backendShow = data.show ?? null;
+        const backendPerformance = data.performance ?? null;
         set((state) => ({
           reservationId: data.reservationId,
           temporaryReservationCode: data.reservationCode,
@@ -356,6 +403,15 @@ export const useReservationStore = create<ReservationState & ReservationActions>
             seat: t.seat as ReservationSeat,
             createdAt: t.createdAt,
           })),
+          // Solo sobreescribimos show/performance si el backend los envía
+          // y tienen contenido (para no pisar la selección local en flujos
+          // donde el backend todavía no persistió el snapshot).
+          ...(backendShow && backendShow.id
+            ? { selectedShow: { ...state.selectedShow, ...backendShow, accentColor: state.selectedShow?.accentColor ?? '#F8C14A' } as SelectedShowSnapshot }
+            : {}),
+          ...(backendPerformance && backendPerformance.id
+            ? { selectedPerformance: { ...state.selectedPerformance, ...backendPerformance } as SelectedPerformanceSnapshot, currentPerformanceId: backendPerformance.id }
+            : {}),
         }));
       },
 
@@ -411,6 +467,89 @@ export const useReservationStore = create<ReservationState & ReservationActions>
           pricing: { ...initialPricing },
         });
       },
+
+      // --- Implementación de acciones de espectáculo / función ---
+
+      setSelectedShow: (show) => {
+        set({
+          selectedShow: {
+            id: show.id,
+            slug: show.slug,
+            title: show.title,
+            subtitle: show.subtitle,
+            category: show.category,
+            genre: show.genre,
+            durationMinutes: show.durationMinutes,
+            ageRating: show.ageRating,
+            accentColor: show.accentColor,
+            venue: show.venue,
+          },
+        });
+      },
+
+      setSelectedPerformance: (performance) => {
+        set({
+          selectedPerformance: {
+            id: performance.id,
+            showId: performance.showId,
+            date: performance.date,
+            time: performance.time,
+            datetime: performance.datetime,
+            label: performance.label,
+            priceFrom: performance.priceFrom,
+            isPremiere: performance.isPremiere,
+          },
+          currentPerformanceId: performance.id,
+        });
+      },
+
+      clearSelectedPerformance: () => {
+        set({
+          selectedShow: null,
+          selectedPerformance: null,
+          currentPerformanceId: null,
+        });
+      },
+
+      hydrateSelectedPerformanceFromRoute: (performanceId) => {
+        const found = getPerformanceById(performanceId);
+        if (!found) return false;
+        const { show, performance } = found;
+        const state = get();
+        // Idempotencia: si ya está hidratado con el mismo id, no tocamos.
+        if (
+          state.currentPerformanceId === performance.id &&
+          state.selectedShow?.id === show.id
+        ) {
+          return true;
+        }
+        set({
+          selectedShow: {
+            id: show.id,
+            slug: show.slug,
+            title: show.title,
+            subtitle: show.subtitle,
+            category: show.category,
+            genre: show.genre,
+            durationMinutes: show.durationMinutes,
+            ageRating: show.ageRating,
+            accentColor: show.accentColor,
+            venue: show.venue,
+          },
+          selectedPerformance: {
+            id: performance.id,
+            showId: performance.showId,
+            date: performance.date,
+            time: performance.time,
+            datetime: performance.datetime,
+            label: performance.label,
+            priceFrom: performance.priceFrom,
+            isPremiere: performance.isPremiere,
+          },
+          currentPerformanceId: performance.id,
+        });
+        return true;
+      },
     }),
     {
       name: 'teatro-reservation-draft',
@@ -434,6 +573,9 @@ export const useReservationStore = create<ReservationState & ReservationActions>
         checkoutUrl: state.checkoutUrl,
         paymentProvider: state.paymentProvider,
         tickets: state.tickets,
+        selectedShow: state.selectedShow,
+        selectedPerformance: state.selectedPerformance,
+        currentPerformanceId: state.currentPerformanceId,
       }),
     }
   )

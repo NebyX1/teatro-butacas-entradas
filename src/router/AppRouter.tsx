@@ -1,5 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { TheaterLayout } from '../common/TheaterLayout';
+import { HomePage } from '../pages/HomePage';
+import { ShowsPage } from '../pages/ShowsPage';
+import { ShowDetailPage } from '../pages/ShowDetailPage';
+import { ImageCreditsPage } from '../pages/ImageCreditsPage';
 import { SeatReservationPage } from '../pages/SeatReservationPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { BuyerDataPage } from '../routes/reservation/BuyerDataPage';
@@ -18,10 +22,15 @@ export function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route element={<TheaterLayout />}>
-          <Route index element={<SeatReservationPage />} />
-          <Route path="platea" element={<SeatReservationPage />} />
+          <Route index element={<HomePage />} />
+          <Route path="espectaculos" element={<ShowsPage />} />
+          <Route path="espectaculos/:showSlug" element={<ShowDetailPage />} />
+          <Route path="espectaculos/:showSlug/funciones" element={<ShowDetailPage />} />
+          <Route path="creditos-imagenes" element={<ImageCreditsPage />} />
 
+          <Route path="reserva/:performanceId" element={<SeatReservationPage />} />
           <Route path="reserva" element={<SeatReservationPage />} />
+          <Route path="platea" element={<Navigate to="/espectaculos" replace />} />
           <Route
             path="reserva/datos"
             element={
@@ -95,7 +104,7 @@ export function AppRouter() {
             }
           />
 
-          <Route path="catalog" element={<Navigate to="/" replace />} />
+          <Route path="catalog" element={<Navigate to="/espectaculos" replace />} />
           <Route path="login" element={<Navigate to="/" replace />} />
           <Route path="verify-2fa" element={<Navigate to="/" replace />} />
           <Route path="*" element={<NotFoundPage />} />

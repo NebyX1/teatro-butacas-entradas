@@ -36,7 +36,9 @@ CREATE TABLE IF NOT EXISTS reservations (
     checkout_url TEXT,
     created_at TEXT NOT NULL,
     expires_at TEXT NOT NULL,
-    paid_at TEXT
+    paid_at TEXT,
+    show_json TEXT NOT NULL DEFAULT '{}',
+    performance_json TEXT NOT NULL DEFAULT '{}'
 );
 
 CREATE TABLE IF NOT EXISTS tickets (
@@ -60,12 +62,31 @@ CREATE TABLE IF NOT EXISTS payments (
 );
 """
 
+# Migración: añadir columnas show_json / performance_json si la tabla
+# ya existía sin ellas (SQLite no soporta ADD COLUMN IF NOT EXISTS).
+_MIGRATION_COLUMNS = {
+    "show_json": "TEXT NOT NULL DEFAULT '{}'",
+    "performance_json": "TEXT NOT NULL DEFAULT '{}'",
+}
+
+
+def _apply_migrations(conn: sqlite3.Connection) -> None:
+    """Añade columnas nuevas a reservations si no existen."""
+    cols = {
+        row["name"]
+        for row in conn.execute("PRAGMA table_info(reservations)").fetchall()
+    }
+    for col, definition in _MIGRATION_COLUMNS.items():
+        if col not in cols:
+            conn.execute(f"ALTER TABLE reservations ADD COLUMN {col} {definition}")
+
 
 def init_db() -> None:
     """Crea las tablas si no existen. Idempotente."""
     conn = _connect()
     try:
         conn.executescript(SCHEMA)
+        _apply_migrations(conn)
         conn.commit()
     finally:
         conn.close()
@@ -102,6 +123,8 @@ def _row_to_reservation(row: sqlite3.Row) -> dict:
         "createdAt": row["created_at"],
         "expiresAt": row["expires_at"],
         "paidAt": row["paid_at"],
+        "show": _parse_json(row["show_json"], {}) if "show_json" in row.keys() else {},
+        "performance": _parse_json(row["performance_json"], {}) if "performance_json" in row.keys() else {},
     }
 
 
@@ -137,8 +160,9 @@ def insert_reservation(reservation: dict) -> None:
             INSERT INTO reservations (
                 id, code, status, customer_json, selected_seats_json,
                 subtotal, service_fee, total, payment_provider, payment_id,
-                checkout_url, created_at, expires_at, paid_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                checkout_url, created_at, expires_at, paid_at,
+                show_json, performance_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 reservation["id"],
@@ -155,6 +179,8 @@ def insert_reservation(reservation: dict) -> None:
                 reservation["createdAt"],
                 reservation["expiresAt"],
                 reservation.get("paidAt"),
+                json.dumps(reservation.get("show", {}), ensure_ascii=False),
+                json.dumps(reservation.get("performance", {}), ensure_ascii=False),
             ),
         )
         conn.commit()
@@ -175,6 +201,8 @@ def update_reservation(reservation_id: str, fields: dict) -> None:
         "payment_id": "payment_id",
         "checkout_url": "checkout_url",
         "paid_at": "paid_at",
+        "show_json": "show_json",
+        "performance_json": "performance_json",
     }
     sets = []
     values: list[Any] = []

@@ -22,6 +22,8 @@ export function ReservationSuccessPage() {
     deliveryOption: store.deliveryOption,
     temporaryReservationCode: store.temporaryReservationCode,
     expiresAt: store.expiresAt,
+    selectedShow: store.selectedShow,
+    selectedPerformance: store.selectedPerformance,
   };
 
   const handleDownloadPdf = async () => {
@@ -67,6 +69,27 @@ export function ReservationSuccessPage() {
 
           {store.temporaryReservationCode && (
             <ReservationCodeBadge code={store.temporaryReservationCode} />
+          )}
+
+          {store.selectedShow && store.selectedPerformance && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                <span className="text-xs text-slate-400 block">Obra</span>
+                <span className="text-sm text-slate-100">{store.selectedShow.title}</span>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                <span className="text-xs text-slate-400 block">Función</span>
+                <span className="text-sm text-slate-100">{store.selectedPerformance.label}</span>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                <span className="text-xs text-slate-400 block">Sala</span>
+                <span className="text-sm text-slate-100">{store.selectedShow.venue}</span>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                <span className="text-xs text-slate-400 block">Duración</span>
+                <span className="text-sm text-slate-100">{store.selectedShow.durationMinutes} min</span>
+              </div>
+            </div>
           )}
 
           <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
@@ -147,7 +170,8 @@ export function ReservationSuccessPage() {
           className="btn btn-primary btn-md shadow-[0_8px_30px_rgba(79,70,229,0.45)]"
           onClick={() => {
             store.resetReservationFlow();
-            navigate('/reserva');
+            store.clearSelectedPerformance();
+            navigate('/espectaculos');
           }}
         >
           Nueva reserva

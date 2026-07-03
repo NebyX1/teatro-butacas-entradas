@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { PlateaSeatMap } from '../components/seat-map/PlateaSeatMap';
 import {
   PalcoSeatMapContainer,
@@ -15,6 +15,7 @@ import type { ReservationSeat } from '../store/useReservationStore';
 import { useReservationStore } from '../store/useReservationStore';
 import { toReservationSeatPlatea, DEFAULT_SEAT_PRICES } from '../lib/reservationPricing';
 import { createReservation } from '../lib/api';
+import { ShowContextBanner } from '../components/shows/ShowContextBanner';
 
 function InfoCard() {
   return (
@@ -50,6 +51,28 @@ function InfoCard() {
 
 export function SeatReservationPage() {
   const navigate = useNavigate();
+  const { performanceId } = useParams<{ performanceId?: string }>();
+
+  // Hidratar contexto de espectáculo desde la ruta (performanceId).
+  // Si no hay performanceId y tampoco hay show seleccionado en el store,
+  // redirigir a /espectaculos con un mensaje amigable.
+  const hydrateSelectedPerformanceFromRoute = useReservationStore(
+    (s) => s.hydrateSelectedPerformanceFromRoute
+  );
+  const hasSelectedShow = useReservationStore((s) => !!s.selectedShow);
+
+  useEffect(() => {
+    if (performanceId) {
+      const ok = hydrateSelectedPerformanceFromRoute(performanceId);
+      if (!ok) {
+        navigate('/espectaculos', { replace: true });
+      }
+    }
+    // Si no hay performanceId, no hidratamos: el banner de "elegí un show"
+    // se muestra abajo. No redirigimos automáticamente para no romper el
+    // flujo interno de "editar butacas" que navega a /reserva sin param.
+  }, [performanceId, hydrateSelectedPerformanceFromRoute, navigate]);
+
   // Selectores estables: solo sacamos del store las acciones (referencias
   // estables) y el sector inicial. No suscribimos el componente a cambios
   // del store para evitar re-renders en cascada. La selección se mantiene
@@ -129,6 +152,7 @@ export function SeatReservationPage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
+      const store = useReservationStore.getState();
       const res = await createReservation({
         selectedSector: activeSectorId,
         selectedSeats: reservationSeats.map((s) => ({
@@ -141,6 +165,25 @@ export function SeatReservationPage() {
           row: s.row,
           side: s.side,
         })),
+        show: store.selectedShow
+          ? {
+              id: store.selectedShow.id,
+              slug: store.selectedShow.slug,
+              title: store.selectedShow.title,
+              category: store.selectedShow.category,
+              durationMinutes: store.selectedShow.durationMinutes,
+              venue: store.selectedShow.venue,
+            }
+          : undefined,
+        performance: store.selectedPerformance
+          ? {
+              id: store.selectedPerformance.id,
+              date: store.selectedPerformance.date,
+              time: store.selectedPerformance.time,
+              datetime: store.selectedPerformance.datetime,
+              label: store.selectedPerformance.label,
+            }
+          : undefined,
       });
       setCreateReservationResponse(res);
       setCurrentStep('buyer-data');
@@ -207,6 +250,37 @@ export function SeatReservationPage() {
         </p>
       </section>
 
+      {/* Banner de contexto: espectáculo + función seleccionados.
+          Si no hay show seleccionado y no hay performanceId en la ruta,
+          mostramos un estado amigable que invita a elegir un espectáculo. */}
+      {hasSelectedShow ? (
+        <ShowContextBanner />
+      ) : !performanceId ? (
+        <div className="glass rounded-2xl p-6 sm:p-8 flex flex-col items-center text-center gap-4">
+          <span className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-amber-400/30 bg-amber-500/10 text-amber-200">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 8v5M12 17h.01M12 22a10 10 0 100-20 10 10 0 000 20z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <div className="flex flex-col gap-1">
+            <h2 className="text-lg font-semibold text-white">Primero elegí un espectáculo para continuar con la reserva.</h2>
+            <p className="text-sm text-slate-400">
+              Navegá la programación del Teatro Lavalleja y seleccioná una función.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/espectaculos')}
+            className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-[#1F1300] transition-transform hover:scale-[1.02] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+          >
+            Ver espectáculos
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+      ) : null}
+
       {sectorClearedMsg && (
         <div
           role="alert"
@@ -234,7 +308,9 @@ export function SeatReservationPage() {
       {/* Layout vertical:
           1) Barra de selección horizontal
           2) Selector segmentado de sector, visualmente pegado a la tarjeta del mapa
-          3) Tarjeta "Elegí tus lugares" + InfoCard */}
+          3) Tarjeta "Elegí tus lugares" + InfoCard
+          Solo se muestra si hay un espectáculo/función seleccionados. */}
+      {hasSelectedShow && (
       <div className="flex flex-col gap-5 sm:gap-6">
         {submitError && (
           <div
@@ -293,6 +369,7 @@ export function SeatReservationPage() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }

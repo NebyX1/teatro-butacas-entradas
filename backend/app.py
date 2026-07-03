@@ -253,6 +253,8 @@ def _summarize_reservation(reservation: dict, tickets: list[dict] | None = None)
         "createdAt": reservation.get("createdAt"),
         "expiresAt": reservation.get("expiresAt"),
         "paidAt": reservation.get("paidAt"),
+        "show": reservation.get("show", {}) or {},
+        "performance": reservation.get("performance", {}) or {},
     }
     if tickets is not None:
         summary["tickets"] = tickets

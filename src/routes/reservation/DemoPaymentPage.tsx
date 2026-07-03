@@ -26,6 +26,8 @@ export function DemoPaymentPage() {
     deliveryOption: store.deliveryOption,
     temporaryReservationCode: store.temporaryReservationCode,
     expiresAt: store.expiresAt,
+    selectedShow: store.selectedShow,
+    selectedPerformance: store.selectedPerformance,
   };
 
   const handleApprove = async () => {

@@ -21,6 +21,8 @@ export function PaymentPendingPage() {
     deliveryOption: store.deliveryOption,
     temporaryReservationCode: store.temporaryReservationCode,
     expiresAt: store.expiresAt,
+    selectedShow: store.selectedShow,
+    selectedPerformance: store.selectedPerformance,
   };
 
   return (
@@ -57,7 +59,10 @@ export function PaymentPendingPage() {
           <button
             type="button"
             className="btn btn-ghost btn-sm text-slate-300 hover:bg-white/10 hover:text-white"
-            onClick={() => navigate('/reserva')}
+            onClick={() => {
+              const perfId = store.currentPerformanceId;
+              navigate(perfId ? `/reserva/${perfId}` : '/espectaculos');
+            }}
           >
             Volver al inicio
           </button>

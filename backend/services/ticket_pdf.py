@@ -117,6 +117,8 @@ def build_ticket_view_model(reservation: dict, ticket: dict) -> dict:
     seat = ticket.get("seat", {})
     customer = reservation.get("customer", {})
     badge = _seat_badge_parts(seat)
+    show = reservation.get("show", {}) or {}
+    performance = reservation.get("performance", {}) or {}
 
     validation_url = (
         f"{Config.BACKEND_BASE_URL.rstrip('/')}"
@@ -130,6 +132,32 @@ def build_ticket_view_model(reservation: dict, ticket: dict) -> dict:
         buyer_full_name = customer.get("email") or "Titular de reserva"
 
     price_info = get_ticket_final_price(reservation, ticket)
+
+    # --- Datos de la función para el PDF (con fallbacks robustos) ---
+    # show_title: prioriza show.title, luego performance.showTitle,
+    # finalmente "Función a confirmar".
+    show_title = (
+        show.get("title")
+        or performance.get("showTitle")
+        or "Función a confirmar"
+    )
+
+    # performance_datetime: prioriza performance.label (texto legible),
+    # luego datetime formateado, luego date+time combinados,
+    # finalmente "Fecha y hora a confirmar".
+    perf_label = performance.get("label") or ""
+    if perf_label:
+        performance_datetime = perf_label
+    elif performance.get("datetime"):
+        performance_datetime = _format_date(performance.get("datetime"))
+    elif performance.get("date") and performance.get("time"):
+        performance_datetime = _format_date(
+            f"{performance['date']}T{performance['time']}:00"
+        )
+    else:
+        performance_datetime = "Fecha y hora a confirmar"
+
+    venue = show.get("venue") or "Teatro Lavalleja"
 
     return {
         "ticketCode": ticket["ticketCode"],
@@ -149,6 +177,9 @@ def build_ticket_view_model(reservation: dict, ticket: dict) -> dict:
         "issuedAt": _format_date(ticket.get("createdAt")),
         "validationUrl": validation_url,
         "qrPng": qr_png,
+        "showTitle": show_title,
+        "performanceDateTime": performance_datetime,
+        "venue": venue,
     }
 
 
@@ -441,13 +472,15 @@ def _draw_ticket(canvas, ticket_vm: dict, x: float, y: float, w: float, h: float
 
     first_field_y = draw_ticket_header(canvas, text_x, text_top, available_w)
 
-    # Columna 1: identificación del comprador + emisión (campos de una línea,
-    # altura fija y predecible).
+    # Columna 1: OBRA y FUNCIÓN al tope (lo más importante del ticket),
+    # luego identificación del comprador. "Obra" y "Función" pueden envolver
+    # hasta 2 líneas; los campos siguientes se desplazan automáticamente.
     cy = first_field_y
+    cy = draw_wrapped_field(canvas, "Obra", ticket_vm["showTitle"], col1_x, cy, col_w)
+    cy = draw_wrapped_field(canvas, "Función", ticket_vm["performanceDateTime"], col1_x, cy, col_w)
     cy = draw_field(canvas, "Código de reserva", ticket_vm["reservationCode"], col1_x, cy, col_w)
     cy = draw_field(canvas, "Comprador", ticket_vm["buyerFullName"], col1_x, cy, col_w)
     cy = draw_field(canvas, "Email", ticket_vm["buyerEmail"], col1_x, cy, col_w)
-    cy = draw_field(canvas, "Emisión", ticket_vm["issuedAt"], col1_x, cy, col_w)
 
     # Columna 2: datos de la butaca. "Butaca" es de altura variable (envuelve
     # hasta 2 líneas para no truncar la etiqueta completa) y "Precio" también
@@ -457,6 +490,7 @@ def _draw_ticket(canvas, ticket_vm: dict, x: float, y: float, w: float, h: float
     cy = draw_field(canvas, "Sector", ticket_vm["sectorLabel"], col2_x, cy, col_w)
     cy = draw_wrapped_field(canvas, "Butaca", ticket_vm["displayLabel"], col2_x, cy, col_w)
     cy = draw_price_field(canvas, ticket_vm, col2_x, cy, col_w)
+    cy = draw_field(canvas, "Emisión", ticket_vm["issuedAt"], col2_x, cy, col_w)
 
     # --- Stub derecho (área QR) ---
     draw_qr_stub(canvas, ticket_vm, sep_x, y, STUB_W, h)

@@ -27,6 +27,25 @@ export interface ApiReservationSummary {
   expiresAt?: string | null;
   paidAt?: string | null;
   tickets?: ApiTicket[];
+  show?: ShowSnapshotPayload | null;
+  performance?: PerformanceSnapshotPayload | null;
+}
+
+export interface ShowSnapshotPayload {
+  id: string;
+  slug?: string;
+  title: string;
+  category?: string;
+  durationMinutes?: number;
+  venue?: string;
+}
+
+export interface PerformanceSnapshotPayload {
+  id: string;
+  date?: string;
+  time?: string;
+  datetime?: string;
+  label?: string;
 }
 
 export interface ApiTicket {
@@ -119,6 +138,8 @@ export function createReservation(payload: {
   selectedSector: string;
   selectedSeats: SelectedSeatPayload[];
   customer?: Partial<CustomerPayload>;
+  show?: ShowSnapshotPayload;
+  performance?: PerformanceSnapshotPayload;
 }): Promise<CreateReservationResponse> {
   return request<CreateReservationResponse>('/api/reservations', {
     method: 'POST',

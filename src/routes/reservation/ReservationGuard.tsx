@@ -19,7 +19,7 @@ export function ReservationGuard({ children, requiredStep }: ReservationGuardPro
 
   // Redirecciones simples de frontend para mantener el flujo coherente.
   if (requiredStep !== 'selection' && !hasSeats) {
-    return <Navigate to="/reserva" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/espectaculos" replace state={{ from: location.pathname }} />;
   }
 
   if ((requiredStep === 'review' || requiredStep === 'pre-payment') && !hasCustomer) {
